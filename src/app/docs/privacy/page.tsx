@@ -6,7 +6,7 @@ import path from 'path';
 // Read privacy policy from a local file
 function getPrivacyPolicy() {
   try {
-    const filePath = path.join(process.cwd(), 'content', 'privacy-policy.md');
+    const filePath = path.join(process.cwd(), 'src', 'content', 'PRIVACY_POLICY.md');
     return fs.readFileSync(filePath, 'utf8');
   } catch (error) {
     console.warn('Error reading privacy policy:', error);
