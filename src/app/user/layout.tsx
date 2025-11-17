@@ -26,7 +26,7 @@ export default function UserLayout({ children }: { children: ReactNode }): React
 function ManagePageWrapper({ children }: { children: ReactNode }) {
   return (
     <SidebarInset>
-      <SidebarPage title='Account Management'>{children}</SidebarPage>
+      <SidebarPage title=''>{children}</SidebarPage>
     </SidebarInset>
   );
 }
