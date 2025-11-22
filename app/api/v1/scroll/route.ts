@@ -1,60 +1,64 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import verifyJWT from '../user/AuthProvider';
 
 interface UserSession {
   isMain: boolean;
   clientID: string;
-  stream: ReadableStream;
   sendMessage: (data: any) => void;
   heartbeat: Date;
 }
 
-const clients = {};
-export async function GET(request) {
+type ClientRegistry = Record<string, UserSession[]>;
+
+const clients: ClientRegistry = {};
+
+export async function GET(request: NextRequest) {
   const user = await verifyJWT(request);
+  const clientID = request.nextUrl.searchParams.get('clientID');
+  if (!clientID) {
+    return NextResponse.json({ error: 'Missing clientID' }, { status: 400 });
+  }
+
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
-      const newClientID = request.nextUrl.searchParams.get('clientID');
       const toBeMain = !clients[user.id] || !clients[user.id].find((client) => client.isMain);
-      if (clients[user.id] && clients[user.id].findIndex((client) => client.clientID === newClientID) !== -1) {
+      if (clients[user.id]?.some((client) => client.clientID === clientID)) {
         console.error('This client already exists!!!');
-      } else {
-        const newClient: UserSession = {
-          clientID: newClientID,
-          isMain: toBeMain,
-          stream: this,
-          sendMessage: (data: any) => {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-          },
-          heartbeat: new Date(),
-        };
-        console.log('Created new client: ', newClient);
-        if (!Object.keys(clients).includes(user.id)) {
-          console.log(`Initializing session array for user ${user.email}.`);
-          clients[user.id] = [];
-        }
-        clients[user.id].push(newClient);
-        console.log('Updated clients list: ', clients[user.id]);
-        const mainClient = clients[user.id].find((client) => client.isMain);
+        return;
+      }
+
+      const newClient: UserSession = {
+        clientID,
+        isMain: toBeMain,
+        sendMessage: (data: unknown) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        },
+        heartbeat: new Date(),
+      };
+
+      if (!clients[user.id]) {
+        clients[user.id] = [];
+      }
+
+      clients[user.id].push(newClient);
+      const mainClient = clients[user.id].find((client) => client.isMain);
+      if (mainClient) {
         newClient.sendMessage({ main: mainClient.clientID });
       }
     },
     cancel(reason) {
-      console.log(this);
-      clients[user.id].splice(
-        clients[user.id].findIndex((session) => session.stream === this),
-        1,
-      );
-      console.log(
-        `Connection closed for user ${user.email} because of ${reason}, total remaining: ${clients[user.id].length}.`,
-      );
-      if (clients[user.id].findIndex((client) => client.isMain) === -1) {
-        const newMain = clients[user.id][0];
-        console.log(`Main connection closed, promoting client ${newMain.clientID} to main.`);
+      const userClients = clients[user.id] ?? [];
+      const index = userClients.findIndex((session) => session.clientID === clientID);
+      if (index !== -1) {
+        userClients.splice(index, 1);
+      }
+
+      if (userClients.length && userClients.findIndex((client) => client.isMain) === -1) {
+        const newMain = userClients[0];
+        newMain.isMain = true;
         newMain.sendMessage({ main: newMain.clientID });
       }
-      console.log(`Total remaining active connections: ${Object.values(clients).flat().length}`);
     },
   });
 
@@ -70,43 +74,41 @@ export async function GET(request) {
   });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request | NextRequest) {
   const user = await verifyJWT(request);
   const data = await request.json();
-  console.log(data);
-  console.log(clients);
-  const mainClientList = clients[user.id].filter((client) => client.isMain);
-  console.log(`Received request from ${data.clientID}: `);
-  const mainClient = [0];
-  console.log(
-    mainClientList.length === 1 ? 'Found main client.' : 'Did not find main client, length: ' + mainClientList.length,
-  );
-  const thisClientList = clients[user.id].filter((client) => client.clientID === data.clientID);
-  const thisClient = thisClientList[0];
-  console.log(
-    thisClientList.length === 1 ? 'Found this client.' : 'Did not find this client, length: ' + thisClientList.length,
-  );
+  const userClients = clients[user.id] ?? [];
+  if (!userClients.length) {
+    return NextResponse.json({ error: 'No active clients registered for user.' }, { status: 404 });
+  }
+
+  const mainClient = userClients.find((client) => client.isMain);
+  const thisClient = userClients.find((client) => client.clientID === data.clientID);
   const now = new Date();
-  if ((mainClient === thisClient && (Object.keys(data).length > 1 || Object.keys(data)[0] !== 'clientID')) || data.main) {
+
+  if (!thisClient) {
+    return NextResponse.json({ error: 'Client not registered' }, { status: 404 });
+  }
+
+  const hasPayloadBeyondHeartbeat = Object.keys(data).some((key) => key !== 'clientID');
+  if ((mainClient && mainClient.clientID === thisClient.clientID && hasPayloadBeyondHeartbeat) || data.main) {
     if (data.main) {
-      console.log(`Updating main client to ${data.main}.`);
-      clients[user.id].find((client) => client.clientID === data.main).isMain = true;
-      clients[user.id].find((client) => client.isMain).isMain = false;
-    } else {
-      console.log(`Request received from main client.`);
+      const newMain = userClients.find((client) => client.clientID === data.main);
+      if (newMain && mainClient) {
+        mainClient.isMain = false;
+        newMain.isMain = true;
+      }
     }
-    for (const client of clients[user.id]) {
+    for (const client of userClients) {
       client.sendMessage(data);
     }
   } else {
-    console.log(`Client ${thisClient.clientID}'s heart has beaten.`);
     thisClient.heartbeat = now;
   }
 
-  for (const client of clients[user.id]) {
+  for (const client of userClients) {
     if ((now.getTime() - client.heartbeat.getTime()) / 1000 >= 60) {
-      console.log(`Disconnecting client ${client.clientID} whose heart has not beaten for 60 seconds.`);
-      client.stream.cancel('Heart has not beaten for 60 seconds.');
+      client.sendMessage({ main: null });
     }
   }
   return NextResponse.json({ success: true });

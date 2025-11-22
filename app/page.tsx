@@ -1,11 +1,10 @@
 'use client';
 import React, { useState } from 'react';
-import axios from 'axios';
-import useSWR from 'swr';
 import { getCookie } from 'cookies-next';
 import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
 import { DocumentDescriptor } from '@/lib/documents';
+import { useDocumentList } from '@/lib/hooks/useDocumentList';
 
 export default function Home() {
   const token = getCookie('jwt');
@@ -15,31 +14,13 @@ export default function Home() {
     data: googleDocs,
     isLoading: loadingGoogle,
     error: googleError,
-  } = useSWR('/documents/google', async () => {
-    const docs = (
-      await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs/list`, {
-        headers: {
-          Authorization: authHeader,
-        },
-      })
-    ).data as DocumentDescriptor[];
-    return docs.map((doc) => ({ ...doc, provider: 'google' as const }));
-  });
+  } = useDocumentList('google', authHeader);
 
   const {
     data: nextcloudDocs,
     isLoading: loadingNextcloud,
     error: nextcloudError,
-  } = useSWR('/documents/nextcloud', async () => {
-    const docs = (
-      await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/nextcloud/docs/list`, {
-        headers: {
-          Authorization: authHeader,
-        },
-      })
-    ).data as DocumentDescriptor[];
-    return docs.map((doc) => ({ ...doc, provider: 'nextcloud' as const }));
-  });
+  } = useDocumentList('nextcloud', authHeader);
 
   const [selectedDocument, setSelectedDocument] = useState<DocumentDescriptor | null>(null);
 

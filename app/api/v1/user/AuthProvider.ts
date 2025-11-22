@@ -1,18 +1,29 @@
+import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 
 interface JwtPayload {
   sub: string;
 }
 
-const prisma = new PrismaClient();
+interface VerifiedUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+}
 
-export default async function verifyJWT(request) {
-  // Extract the authorization header
-  const authToken = request.headers.get('authorization').replaceAll('Bearer ', '');
+export default async function verifyJWT(request: Request | NextRequest): Promise<VerifiedUser> {
+  const authHeader = request.headers.get('authorization');
+
+  if (!authHeader) {
+    throw new Error('Missing authorization header.');
+  }
+
+  const authToken = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   if (!authToken) {
-    throw new Error('Missing authorization header.');
+    throw new Error('Missing authorization token.');
   }
 
   const jwtSecret = process.env.JWT_SECRET;
@@ -22,7 +33,6 @@ export default async function verifyJWT(request) {
 
   const decoded = jwt.verify(authToken, jwtSecret) as JwtPayload;
 
-  // Fetch user information from the database
   const user = await prisma.user.findUnique({
     where: { id: decoded.sub },
     select: {
@@ -30,7 +40,6 @@ export default async function verifyJWT(request) {
       email: true,
       firstName: true,
       lastName: true,
-      // Add any other fields you want to return
     },
   });
 
@@ -38,6 +47,5 @@ export default async function verifyJWT(request) {
     throw new Error('No user found matching the email in the JWT.');
   }
 
-  // Return user information
   return user;
 }

@@ -1,8 +1,6 @@
-import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import axios, { AxiosResponse } from 'axios';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 interface UserInfo {
   email: string;
@@ -30,31 +28,23 @@ export class GoogleOAuth {
     this.magicLinkUrl = process.env.AUTH_WEB + '/close/google' || '';
   }
 
-  private async getRefreshToken(code: string, redirectUri: string) {
-    let doneTrying = false;
-    let response;
-    while (!doneTrying) {
-      try {
-        response = await axios
-          .post('https://accounts.google.com/o/oauth2/token', {
-            code: code.replaceAll('%2F', '/').replaceAll('%3D', '=').replaceAll('%3F', '?').replaceAll('%3D', '='),
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
-            redirect_uri: process.env.AUTH_WEB + '/close/google',
-            grant_type: 'authorization_code',
-          })
-          .catch((error) => error.response);
-      } catch (exception) {
-        console.error(exception);
-      }
-      if (response.status !== 200) {
-        console.error("Failed to get authorization_code from Google's OAuth2 API.");
-        console.log(response.data);
-        doneTrying = true;
-      } else {
-        console.log('Done getting authorization_code: ', response.data);
-        doneTrying = true;
-      }
+  private async getRefreshToken(
+    code: string,
+    redirectUri: string,
+  ): Promise<{ access_token: string; refresh_token?: string }> {
+    const response: AxiosResponse<{ access_token: string; refresh_token?: string }> = await axios.post(
+      'https://accounts.google.com/o/oauth2/token',
+      {
+        code: code.replaceAll('%2F', '/').replaceAll('%3D', '=').replaceAll('%3F', '?').replaceAll('%3D', '='),
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      },
+    );
+
+    if (response.status !== 200 || !response.data.access_token) {
+      throw new Error("Failed to get authorization_code from Google's OAuth2 API.");
     }
 
     return response.data;
@@ -75,21 +65,25 @@ export class GoogleOAuth {
   }
 
   async listUserDocuments(email: string): Promise<GoogleDoc[]> {
-    const { accessToken } = await prisma.user.findFirst({
+    const userTokens = await prisma.user.findFirst({
       where: { email: email },
       select: {
         accessToken: true,
       },
     });
+
+    if (!userTokens?.accessToken) {
+      throw new Error('Missing access token for Google user');
+    }
     const files = (
       await axios
         .get('https://www.googleapis.com/drive/v3/files', {
           params: {
-            q: `mimeType='application/vnd.google-apps.document'`,
+            q: "mimeType='application/vnd.google-apps.document'",
             fields: 'files(id, name, description, starred, size, modifiedTime)',
           },
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${userTokens.accessToken}`,
           },
         })
         .catch((error) => error.response)
@@ -100,13 +94,17 @@ export class GoogleOAuth {
     return files;
   }
 
-  async getUserDocumentMarkdown(email, documentID) {
-    const { accessToken } = await prisma.user.findFirst({
+  async getUserDocumentMarkdown(email: string, documentID: string): Promise<string> {
+    const userTokens = await prisma.user.findFirst({
       where: { email: email },
       select: {
         accessToken: true,
       },
     });
+
+    if (!userTokens?.accessToken) {
+      throw new Error('Missing access token for Google user');
+    }
     const documentBody = (
       await axios
         .get(`https://docs.google.com/feeds/download/documents/export/Export`, {
@@ -115,7 +113,7 @@ export class GoogleOAuth {
             exportFormat: 'markdown',
           },
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${userTokens.accessToken}`,
           },
         })
         .catch((error) => error.response)
