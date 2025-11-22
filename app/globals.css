@@ -74,3 +74,43 @@
     @apply bg-background text-foreground;
   }
 }
+
+.markdown-body {
+  @apply space-y-4 leading-relaxed;
+}
+
+.markdown-body h1 {
+  @apply text-3xl font-semibold;
+}
+
+.markdown-body h2 {
+  @apply text-2xl font-semibold;
+}
+
+.markdown-body h3 {
+  @apply text-xl font-semibold;
+}
+
+.markdown-body p {
+  @apply text-base;
+}
+
+.markdown-body ul {
+  @apply list-disc space-y-2 pl-6;
+}
+
+.markdown-body ol {
+  @apply list-decimal space-y-2 pl-6;
+}
+
+.markdown-body code {
+  @apply rounded bg-muted px-2 py-1 text-sm;
+}
+
+.markdown-body pre {
+  @apply overflow-x-auto rounded-lg bg-muted px-4 py-3 text-sm;
+}
+
+.markdown-body blockquote {
+  @apply border-l-4 border-primary/40 bg-primary/5 px-4 py-2 italic text-muted-foreground;
+}

@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { getCookie } from 'cookies-next';
 import useSWR from 'swr';
-import MarkdownBlock from '@agixt/interactive/MarkdownBlock';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { ArrowLeft, Play, Square, ArrowUpDown, ArrowLeftRight, ChevronRight, ChevronsRight } from 'lucide-react';
+import { ArrowLeft, Play, Square, ArrowUpDown, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -22,8 +23,8 @@ export type TeleprompterProps = {
 
 export default function Teleprompter({ googleDoc, setSelectedDocument }: TeleprompterProps) {
   const eventSourceRef = useRef<EventSource | null>(null);
-  const mainRef = useRef(null);
-  const [clientID, setClientID] = useState<string>(uuidv4());
+  const mainRef = useRef<HTMLElement | null>(null);
+  const [clientID] = useState<string>(uuidv4());
   const [mainWindow, setMainWindow] = useState<boolean>(false);
   const [autoScrolling, setAutoScrolling] = useState<boolean>(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState<number>(5);
@@ -32,145 +33,179 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   const playingIntervalRef = useRef<number | null>(null);
   const heartbeatIntervalRef = useRef<number | null>(null);
 
+  const authHeader = useCallback(() => {
+    const token = getCookie('jwt');
+    return typeof token === 'string' ? token : '';
+  }, []);
+
   const handleInputScroll = useCallback(() => {
-    if (mainWindow) {
-      const scrollPosition = mainRef.current.scrollTop;
-      fetch('/api/v1/scroll', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getCookie('jwt'),
-        },
-        body: JSON.stringify({ clientID: clientID, position: scrollPosition }),
-      });
+    if (!mainWindow || !mainRef.current) {
+      return;
     }
-  }, [mainWindow, clientID]);
+    const scrollPosition = mainRef.current.scrollTop;
+    fetch('/api/v1/scroll', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader(),
+      },
+      body: JSON.stringify({ clientID, position: scrollPosition }),
+    });
+  }, [authHeader, clientID, mainWindow]);
 
   useEffect(() => {
-    heartbeatIntervalRef.current = setInterval(() => {
+    heartbeatIntervalRef.current = window.setInterval(() => {
       fetch('/api/v1/scroll', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getCookie('jwt'),
+          Authorization: authHeader(),
         },
-        body: JSON.stringify({ clientID: clientID }),
+        body: JSON.stringify({ clientID }),
       });
-    }, 5000) as unknown as number;
+    }, 5000);
+
     return () => {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
+      if (heartbeatIntervalRef.current) {
+        window.clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
     };
-  }, [clientID]);
+  }, [authHeader, clientID]);
 
   const handleReceivedScroll = useCallback(
     (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       if (data.main) {
         setMainWindow(data.main === clientID);
-      } else if (!mainWindow) {
-        mainRef.current.scrollTo(0, Number(data.position));
+        return;
+      }
+
+      if (!mainWindow && mainRef.current) {
+        mainRef.current.scrollTo({ top: Number(data.position) });
         if (data.selectedDocument) {
           setSelectedDocument(data.selectedDocument);
         }
       }
     },
-    [setSelectedDocument, mainWindow, clientID],
+    [clientID, mainWindow, setSelectedDocument],
   );
 
   const handleKillInterval = useCallback(() => {
-    if (mainWindow && playingIntervalRef.current !== null) {
+    if (playingIntervalRef.current !== null) {
       setAutoScrolling(false);
-      clearInterval(playingIntervalRef.current);
+      window.clearInterval(playingIntervalRef.current);
       playingIntervalRef.current = null;
     }
-  }, [mainWindow]);
+  }, []);
 
   const handleInterval = useCallback(() => {
+    if (!mainRef.current) return;
+
     const currentScroll = mainRef.current.scrollTop;
-    mainRef.current.scrollTo(0, Number(mainRef.current.scrollTop + autoScrollSpeed));
+    mainRef.current.scrollTo({ top: currentScroll + autoScrollSpeed, behavior: 'smooth' });
     if (mainRef.current.scrollTop === currentScroll) {
       handleKillInterval();
     }
-  }, [mainRef, autoScrollSpeed, handleKillInterval]);
+  }, [autoScrollSpeed, handleKillInterval]);
 
   useEffect(() => {
-    mainRef.current = document.querySelector('main');
-    mainRef.current.addEventListener('scroll', handleInputScroll);
+    const mainElement = document.querySelector('main');
+    if (!mainElement) {
+      return undefined;
+    }
+
+    mainRef.current = mainElement as HTMLElement;
+    mainElement.addEventListener('scroll', handleInputScroll);
 
     eventSourceRef.current = new EventSourcePolyfill(`/api/v1/scroll?clientID=${clientID}`, {
       headers: {
-        Authorization: getCookie('jwt'),
+        Authorization: authHeader(),
       },
     });
     eventSourceRef.current.addEventListener('message', handleReceivedScroll);
 
     return () => {
-      mainRef.current.removeEventListener('scroll', handleInputScroll);
+      mainElement.removeEventListener('scroll', handleInputScroll);
       if (eventSourceRef.current) {
         eventSourceRef.current.removeEventListener('message', handleReceivedScroll);
         eventSourceRef.current.close();
       }
-      clearInterval(playingIntervalRef.current);
-      playingIntervalRef.current = null;
+      handleKillInterval();
     };
-  }, [handleInputScroll, handleReceivedScroll, clientID]);
+  }, [authHeader, clientID, handleInputScroll, handleKillInterval, handleReceivedScroll]);
 
-  const { data, isLoading, error } = useSWR(`/docs/${googleDoc.id}`, async () => {
-    return googleDoc
-      ? (
-          await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs?id=${googleDoc.id}`, {
-            headers: {
-              Authorization: getCookie('jwt'),
-            },
-          })
-        ).data
-      : null;
+  const { data, isLoading, error } = useSWR<string | null>(`/docs/${googleDoc.id}`, async () => {
+    if (!googleDoc) return null;
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs?id=${googleDoc.id}`, {
+      headers: {
+        Authorization: authHeader(),
+      },
+    });
+    return response.data;
   });
 
   return (
-    <>
-      <div className='container mx-auto px-16'>
-        <h1 className='flex items-center justify-center text-3xl font-bold mb-6'>
-          <Button variant='ghost' size='icon' onClick={() => setSelectedDocument(null)} className='mr-2'>
-            <ArrowLeft className='h-6 w-6' />
+    <div className='grid gap-6 lg:grid-cols-[1fr,320px]'>
+      <div className='space-y-4'>
+        <div className='flex flex-wrap items-center gap-3'>
+          <Button variant='ghost' size='icon' onClick={() => setSelectedDocument(null)}>
+            <ArrowLeft className='h-5 w-5' />
+            <span className='sr-only'>Back to documents</span>
           </Button>
-          {googleDoc.name} - {mainWindow ? 'Main Window' : 'Follower Window'}
-        </h1>
-
-        {error ? (
-          <Card>
-            <CardContent>
-              <p className='text-base'>Unable to load document from Google, an error occurred.</p>
-              <p className='text-base text-destructive'>{error.message}</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div
-            style={{
-              transform: `scale(${flipHorizontal ? '-1' : '1'}, ${flipVertical ? '-1' : '1'})`,
-            }}
-          >
-            <MarkdownBlock content={isLoading ? 'Loading Document from Google...' : data} />
+          <div className='space-y-1'>
+            <p className='text-sm font-medium text-muted-foreground'>
+              {mainWindow ? 'Main Window' : 'Follower Window'}
+            </p>
+            <h1 className='text-2xl font-semibold'>{googleDoc.name}</h1>
           </div>
-        )}
+        </div>
+
+        <Card className='overflow-hidden'>
+          <CardHeader>
+            <CardTitle className='text-lg'>Live document</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {error ? (
+              <div className='rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive'>
+                Unable to load document from Google: {error.message}
+              </div>
+            ) : (
+              <div
+                className='min-h-[60vh] space-y-4 rounded-lg border bg-card/40 p-6 shadow-inner'
+                style={{
+                  transform: `scale(${flipHorizontal ? '-1' : '1'}, ${flipVertical ? '-1' : '1'})`,
+                }}
+              >
+                {isLoading ? (
+                  <p className='text-muted-foreground'>Loading document from Google...</p>
+                ) : (
+                  <div className='markdown-body'>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{data ?? ''}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className='fixed top-24 left-8 w-48'>
+      <Card className='sticky top-28 h-fit self-start shadow-md'>
         <CardHeader>
-          <CardTitle className='text-sm text-center'>Control Panel</CardTitle>
+          <CardTitle className='text-lg text-center'>Control Panel</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='space-y-4'>
           {!mainWindow ? (
             <Button
+              className='w-full'
               onClick={() => {
                 fetch('/api/v1/scroll', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    Authorization: getCookie('jwt'),
+                    Authorization: authHeader(),
                   },
-                  body: JSON.stringify({ clientID: clientID, main: clientID }),
+                  body: JSON.stringify({ clientID, main: clientID }),
                 });
               }}
             >
@@ -178,32 +213,32 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
             </Button>
           ) : !autoScrolling ? (
             <div className='space-y-4'>
-              <div className='flex justify-center space-x-2'>
+              <div className='flex items-center justify-center gap-2'>
                 <Button
                   variant='outline'
                   size='icon'
                   onClick={() => {
-                    if (mainWindow && playingIntervalRef.current === null) {
+                    if (playingIntervalRef.current === null) {
                       setAutoScrolling(true);
-                      const interval = setInterval(handleInterval, 500);
-                      playingIntervalRef.current = interval as unknown as number;
+                      const interval = window.setInterval(handleInterval, 500);
+                      playingIntervalRef.current = interval;
                     }
                   }}
                 >
                   <Play className='h-4 w-4' />
                 </Button>
-                <Button variant='outline' size='icon' onClick={() => mainWindow && setFlipVertical((old) => !old)}>
+                <Button variant='outline' size='icon' onClick={() => setFlipVertical((old) => !old)}>
                   <ArrowUpDown className={`h-4 w-4 ${flipVertical ? 'text-primary' : ''}`} />
                 </Button>
-                <Button variant='outline' size='icon' onClick={() => mainWindow && setFlipHorizontal((old) => !old)}>
+                <Button variant='outline' size='icon' onClick={() => setFlipHorizontal((old) => !old)}>
                   <ArrowLeftRight className={`h-4 w-4 ${flipHorizontal ? 'text-primary' : ''}`} />
                 </Button>
               </div>
 
               <div className='space-y-2'>
-                <div className='flex justify-between'>
-                  <ChevronRight className='h-4 w-4' />
-                  <ChevronsRight className='h-4 w-4' />
+                <div className='flex justify-between text-xs uppercase tracking-wide text-muted-foreground'>
+                  <span>Slower</span>
+                  <span>Faster</span>
                 </div>
                 <Slider
                   min={5}
@@ -212,15 +247,20 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
                   value={[autoScrollSpeed]}
                   onValueChange={(value) => setAutoScrollSpeed(value[0])}
                 />
+                <p className='text-xs text-muted-foreground'>Current speed: {autoScrollSpeed}</p>
               </div>
             </div>
           ) : (
-            <Button variant='outline' size='icon' onClick={handleKillInterval}>
+            <Button variant='outline' size='icon' className='w-full' onClick={handleKillInterval}>
               <Square className='h-4 w-4' />
             </Button>
           )}
+
+          <div className='rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground'>
+            <p>Share this page to let collaborators follow your scroll position in real time.</p>
+          </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

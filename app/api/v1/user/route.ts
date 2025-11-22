@@ -3,7 +3,8 @@ import verifyJWT from './AuthProvider';
 import jwt from 'jsonwebtoken';
 export async function GET(request: NextRequest) {
   try {
-    return NextResponse.json(verifyJWT(request));
+    const user = await verifyJWT(request);
+    return NextResponse.json(user);
   } catch (error) {
     console.error('Error verifying JWT:', error);
     if (error instanceof jwt.JsonWebTokenError) {
