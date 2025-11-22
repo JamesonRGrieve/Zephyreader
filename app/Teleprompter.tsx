@@ -10,15 +10,11 @@ import { ArrowLeft, Play, Square, ArrowUpDown, ArrowLeftRight } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-
-export type GoogleDoc = {
-  id: string;
-  name: string;
-};
+import { DocumentDescriptor } from '@/lib/documents';
 
 export type TeleprompterProps = {
-  googleDoc: GoogleDoc;
-  setSelectedDocument: (doc: GoogleDoc | null) => void;
+  googleDoc: DocumentDescriptor;
+  setSelectedDocument: (doc: DocumentDescriptor | null) => void;
 };
 
 export default function Teleprompter({ googleDoc, setSelectedDocument }: TeleprompterProps) {
@@ -135,9 +131,10 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
     };
   }, [authHeader, clientID, handleInputScroll, handleKillInterval, handleReceivedScroll]);
 
-  const { data, isLoading, error } = useSWR<string | null>(`/docs/${googleDoc.id}`, async () => {
+  const { data, isLoading, error } = useSWR<string | null>(`/docs/${googleDoc.provider}/${googleDoc.id}`, async () => {
     if (!googleDoc) return null;
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs?id=${googleDoc.id}`, {
+    const endpoint = googleDoc.provider === 'nextcloud' ? 'nextcloud' : 'google';
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/${endpoint}/docs?id=${googleDoc.id}`, {
       headers: {
         Authorization: authHeader(),
       },
@@ -168,7 +165,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
           <CardContent>
             {error ? (
               <div className='rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive'>
-                Unable to load document from Google: {error.message}
+                Unable to load document from {googleDoc.provider === 'google' ? 'Google' : 'Nextcloud'}: {error.message}
               </div>
             ) : (
               <div
@@ -178,7 +175,9 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
                 }}
               >
                 {isLoading ? (
-                  <p className='text-muted-foreground'>Loading document from Google...</p>
+                  <p className='text-muted-foreground'>
+                    Loading document from {googleDoc.provider === 'google' ? 'Google' : 'Nextcloud'}...
+                  </p>
                 ) : (
                   <div className='markdown-body'>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{data ?? ''}</ReactMarkdown>

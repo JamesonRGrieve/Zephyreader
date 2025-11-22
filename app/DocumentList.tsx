@@ -2,25 +2,19 @@ import React from 'react';
 import { Star, StarOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-export type GoogleDoc = {
-  id: string;
-  name: string;
-  starred: boolean;
-  modifiedTime: string;
-  size: number;
-};
+import { DocumentDescriptor } from '@/lib/documents';
 
 export type DocumentListProps = {
-  documents: GoogleDoc[];
-  setSelectedDocument: (doc: GoogleDoc) => void;
+  title: string;
+  documents: DocumentDescriptor[];
+  setSelectedDocument: (doc: DocumentDescriptor) => void;
 };
 
-export default function DocumentList({ documents, setSelectedDocument }: DocumentListProps) {
+export default function DocumentList({ title, documents, setSelectedDocument }: DocumentListProps) {
   return (
     <Card className='overflow-hidden'>
       <CardHeader className='pb-4'>
-        <CardTitle className='text-lg'>Your Google Docs</CardTitle>
+        <CardTitle className='text-lg'>{title}</CardTitle>
       </CardHeader>
       <CardContent className='p-0'>
         <div className='w-full overflow-x-auto'>
@@ -28,6 +22,7 @@ export default function DocumentList({ documents, setSelectedDocument }: Documen
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Starred</TableHead>
                 <TableHead>Modified</TableHead>
                 <TableHead>Size</TableHead>
@@ -36,7 +31,7 @@ export default function DocumentList({ documents, setSelectedDocument }: Documen
             <TableBody>
               {documents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className='text-center text-muted-foreground'>
+                  <TableCell colSpan={5} className='text-center text-muted-foreground'>
                     No documents available yet.
                   </TableCell>
                 </TableRow>
@@ -48,6 +43,7 @@ export default function DocumentList({ documents, setSelectedDocument }: Documen
                     onClick={() => setSelectedDocument(doc)}
                   >
                     <TableCell className='font-medium'>{doc.name}</TableCell>
+                    <TableCell className='uppercase text-muted-foreground'>{doc.provider}</TableCell>
                     <TableCell>
                       {doc.starred ? (
                         <Star className='h-5 w-5 text-primary' />
@@ -55,8 +51,12 @@ export default function DocumentList({ documents, setSelectedDocument }: Documen
                         <StarOff className='h-5 w-5 text-muted-foreground' />
                       )}
                     </TableCell>
-                    <TableCell>{new Date(doc.modifiedTime).toLocaleString()}</TableCell>
-                    <TableCell>{(doc.size / 1024).toFixed(2)} KB</TableCell>
+                    <TableCell>
+                      {doc.modifiedTime ? new Date(doc.modifiedTime).toLocaleString() : 'Unknown'}
+                    </TableCell>
+                    <TableCell>
+                      {typeof doc.size === 'number' ? `${(doc.size / 1024).toFixed(2)} KB` : 'N/A'}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
