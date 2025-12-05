@@ -1,14 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import axios from 'axios';
-import { getCookie } from 'cookies-next';
-import useSWR from 'swr';
-import MarkdownBlock from '@agixt/interactive/MarkdownBlock';
-import { EventSourcePolyfill } from 'event-source-polyfill';
-import { v4 as uuidv4 } from 'uuid';
-import { ArrowLeft, Play, Square, ArrowUpDown, ArrowLeftRight, ChevronRight, ChevronsRight } from 'lucide-react';
+import MarkdownBlock from '@/components/markdown/MarkdownBlock';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import axios from 'axios';
+import { getCookie } from 'cookies-next';
+import { EventSourcePolyfill } from 'event-source-polyfill';
+import { ArrowLeft, ArrowLeftRight, ArrowUpDown, ChevronRight, ChevronsRight, Play, Square } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import useSWR from 'swr';
+import { v4 as uuidv4 } from 'uuid';
 
 export type GoogleDoc = {
   id: string;

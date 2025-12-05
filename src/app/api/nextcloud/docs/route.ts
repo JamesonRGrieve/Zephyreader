@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import verifyJWT from '../../../../../app/api/v1/user/AuthProvider';
+import verifyJWT from '../../user/AuthProvider';
 import { NextcloudConnector } from '../NextcloudConnector';
 
 export async function GET(request: NextRequest) {
