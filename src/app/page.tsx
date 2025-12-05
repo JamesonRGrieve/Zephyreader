@@ -13,7 +13,7 @@ export default function Home() {
     error,
   } = useSWR('/documents', async () => {
     return (
-      await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs/list`, {
+      await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/google/docs/list`, {
         headers: {
           Authorization: getCookie('jwt'),
         },

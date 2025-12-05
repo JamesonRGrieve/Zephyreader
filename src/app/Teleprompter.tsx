@@ -119,7 +119,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   const { data, isLoading, error } = useSWR(`/docs/${googleDoc.id}`, async () => {
     return googleDoc
       ? (
-          await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs?id=${googleDoc.id}`, {
+          await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/google/docs?id=${googleDoc.id}`, {
             headers: {
               Authorization: getCookie('jwt'),
             },
