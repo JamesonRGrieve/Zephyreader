@@ -1,32 +1,41 @@
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { Button } from '@/components/ui/button';
+'use client';
+import axios from 'axios';
+import { getCookie } from 'cookies-next';
+import { useState } from 'react';
+import useSWR from 'swr';
+import DocumentList from './DocumentList';
+import Teleprompter from './Teleprompter';
 
-import { cookies } from 'next/headers';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+export default function Home() {
+  const {
+    data: documents,
+    isLoading,
+    error,
+  } = useSWR('/documents', async () => {
+    return (
+      await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/v1/google/docs/list`, {
+        headers: {
+          Authorization: getCookie('jwt'),
+        },
+      })
+    ).data;
+  });
 
-export default async function Home() {
+  const [selectedDocument, setSelectedDocument] = useState(null);
+
   return (
-    <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className='w-full'>
-      <header
-        className='sticky top-0 flex items-center justify-between gap-4 px-4 border-b md:px-6 bg-muted min-h-16'
-        style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3.5rem + env(safe-area-inset-top))' }}
-      >
-        <div className='flex items-center'>
-          <Link href='/' className='flex items-center gap-2 text-lg font-semibold md:text-lg text-foreground'>
-            <span className=''>{process.env.NEXT_PUBLIC_APP_NAME}</span>
-          </Link>
-        </div>
-        <div className='flex items-center gap-2'>
-          <ThemeToggle initialTheme={(await cookies()).get('theme')?.value} />
-          <Link href={process.env.NEXT_PUBLIC_AUTH_URI || '/user'}>
-            <Button size='lg' className='px-4 rounded-full'>
-              Login or Register
-            </Button>
-          </Link>
-        </div>
-      </header>
-      <main></main>
+    <div className='container mx-auto px-4 py-8'>
+      {!selectedDocument && (
+        <>
+          <h1 className='text-4xl font-bold mb-8 text-center'>Welcome to OpenTeleprompt</h1>
+          {isLoading ? (
+            <p className='text-lg text-center'>Loading documents...</p>
+          ) : (
+            <DocumentList documents={documents} setSelectedDocument={setSelectedDocument} />
+          )}
+        </>
+      )}
+      {selectedDocument && <Teleprompter googleDoc={selectedDocument} setSelectedDocument={setSelectedDocument} />}
     </div>
   );
 }
