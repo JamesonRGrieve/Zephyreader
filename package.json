@@ -129,7 +129,7 @@
     "react-simple-oauth2-login": "^0.5.4",
     "react-syntax-highlighter": "^15.6.6",
     "remark-gfm": "^4.0.1",
-    "rimraf": "^6.1.0",
+    "rimraf": "^6.1.2",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
