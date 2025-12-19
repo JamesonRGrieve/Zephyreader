@@ -24,7 +24,7 @@ npm run dev
 ```
 APP_NAME=
 APP_URI=http://localhost:6969
-API_URI=http://localhost:1996
+API_URI=http://localhost:6969
 ```
 
 ---
