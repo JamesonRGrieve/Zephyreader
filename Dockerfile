@@ -60,7 +60,7 @@ RUN npm config set fetch-timeout 600000 && \
 
 RUN npm install -g npm@latest && \
     (npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts || \
-     (npm cache clean --force && npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts))
+    (npm cache clean --force && npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts))
 RUN npm rebuild || true
 
 COPY --from=builder /client-build/server-wrapper.js /client/
@@ -68,6 +68,6 @@ COPY --from=builder /client-build/public /client/public
 COPY --from=builder /client-build/.next/standalone /client/
 COPY --from=builder /client-build/.next/static /client/.next/static
 
-EXPOSE 1109
-ENV PORT=1109
+EXPOSE 6969
+ENV PORT=6969
 ENTRYPOINT ["node", "server-wrapper.js"]

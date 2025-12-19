@@ -5,7 +5,7 @@
 ### Cloning
 
 ```sh
-git clone git@github.com:JamesonRGrieve/ClientFramework.git --recursive
+git clone git@github.com:JamesonRGrieve/Zephyreader.git --recursive
 ```
 
 **This repository uses submodules and the `--recursive` flag is important!**
@@ -23,7 +23,7 @@ npm run dev
 
 ```
 APP_NAME=
-APP_URI=http://localhost:1109
+APP_URI=http://localhost:6969
 API_URI=http://localhost:1996
 ```
 
