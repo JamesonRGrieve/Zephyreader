@@ -1,28 +1,15 @@
 'use client';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { ZephyrexRouter } from 'zephyrex';
+import { type ReactNode, use } from 'react';
 
-import { notFound } from 'next/navigation';
-import { ReactNode } from 'react';
-// Import any other router components you want to use
-// import AnotherRouter from '../another-router-path/AnotherRouter';
-
-interface RouterComponentProps {
-  params: { slug: string[] };
-  searchParams: Record<string, string | string[]>;
+interface CatchAllPageProps {
+  params: Promise<{ slug: string[] }>;
+  searchParams: Promise<Record<string, string>>;
 }
 
-type RouterComponent = (props: RouterComponentProps) => ReactNode;
-
-export default function CatchAllPage({ params, searchParams }: RouterComponentProps) {
-  const routers: RouterComponent[] = [
-    // Add any other router components here.
-  ];
-
-  for (const Router of routers) {
-    const result = Router({ params, searchParams });
-    if (result !== null) {
-      return result;
-    }
-  }
-
-  return notFound();
+export default function CatchAllPage({ params, searchParams }: CatchAllPageProps): ReactNode {
+  const resolvedParams = use(params);
+  const resolvedSearchParams = use(searchParams);
+  return <ZephyrexRouter params={resolvedParams} searchParams={resolvedSearchParams} />;
 }

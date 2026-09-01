@@ -1,31 +1,15 @@
-import { Controls, Description, Primary, Stories, Subtitle, Title } from '@storybook/blocks';
-import { initialize, mswLoader } from 'msw-storybook-addon';
-import React from 'react';
-import './../src/app/globals.css'; // Import global styles for the app
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { Preview } from '@storybook/react';
+import '../src/app/globals.css';
 
-initialize({
-  onUnhandledRequest: 'bypass', // Don't warn about unhandled requests
-});
-const preview = {
+const preview: Preview = {
   parameters: {
-    actions: { argTypesRegex: '^on[A-Z].*' },
-    controls: { matchers: { color: /(background|color)$/i, date: /Date$/ } },
-    docs: {
-      page: () => (
-        <>
-          <Title />
-          <Subtitle />
-          <Description />
-          <Primary />
-          <Controls />
-          <Stories />
-        </>
-      ),
+    controls: {
+      matchers: { color: /(background|color)$/i, date: /Date$/ },
     },
     nextjs: {
-      appDirectory: true, // Set to true if your project uses the app directory
+      appDirectory: true,
     },
-    loaders: [mswLoader],
   },
 };
 

@@ -16,6 +16,16 @@ tests/test_screenshots
 /analyze/
 /out/
 
+# storybook / playwright test artifacts
+/storybook-static/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# prisma sqlite dev db
+*.db
+
 # production
 /build
 

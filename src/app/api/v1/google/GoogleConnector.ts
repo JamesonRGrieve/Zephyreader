@@ -75,12 +75,16 @@ export class GoogleOAuth {
   }
 
   async listUserDocuments(email: string): Promise<GoogleDoc[]> {
-    const { accessToken } = await prisma.user.findFirst({
+    const record = await prisma.user.findFirst({
       where: { email: email },
       select: {
         accessToken: true,
       },
     });
+    if (!record) {
+      throw new Error(`No user found for email ${email}.`);
+    }
+    const { accessToken } = record;
     const files = (
       await axios
         .get('https://www.googleapis.com/drive/v3/files', {
@@ -100,13 +104,17 @@ export class GoogleOAuth {
     return files;
   }
 
-  async getUserDocumentMarkdown(email, documentID) {
-    const { accessToken } = await prisma.user.findFirst({
+  async getUserDocumentMarkdown(email: string, documentID: string) {
+    const record = await prisma.user.findFirst({
       where: { email: email },
       select: {
         accessToken: true,
       },
     });
+    if (!record) {
+      throw new Error(`No user found for email ${email}.`);
+    }
+    const { accessToken } = record;
     const documentBody = (
       await axios
         .get(`https://docs.google.com/feeds/download/documents/export/Export`, {

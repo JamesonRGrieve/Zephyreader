@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-import { DocumentDescriptor } from '@/lib/documents';
+import { DocumentDescriptor } from '~/lib/documents';
 
 export interface NextcloudDocument extends DocumentDescriptor {
   provider: 'nextcloud';

@@ -1,74 +1,77 @@
-import MarkdownBlock from '@/components/markdown/MarkdownBlock';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
+'use client';
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios';
-import { getCookie } from 'cookies-next';
-import { EventSourcePolyfill } from 'event-source-polyfill';
+import { getCookie } from 'cookies-next/client';
+import { EventSourcePolyfill, type MessageEvent as SseMessageEvent } from 'event-source-polyfill';
 import { ArrowLeft, ArrowLeftRight, ArrowUpDown, ChevronRight, ChevronsRight, Play, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { v4 as uuidv4 } from 'uuid';
-
-export type GoogleDoc = {
-  id: string;
-  name: string;
-};
+import MarkdownBlock from '@/components/markdown/MarkdownBlock';
+import { Button } from 'zephyrex/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from 'zephyrex/ui/card';
+import { Slider } from 'zephyrex/ui/slider';
+import type { PrompterDocument } from '~/lib/documents';
 
 export type TeleprompterProps = {
-  googleDoc: GoogleDoc;
-  setSelectedDocument: (doc: GoogleDoc | null) => void;
+  googleDoc: PrompterDocument;
+  setSelectedDocument: (doc: PrompterDocument | null) => void;
 };
 
+const HEARTBEAT_INTERVAL_MS = 5000;
+const AUTO_SCROLL_TICK_MS = 500;
+
 export default function Teleprompter({ googleDoc, setSelectedDocument }: TeleprompterProps) {
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const mainRef = useRef(null);
-  const [clientID, setClientID] = useState<string>(uuidv4());
+  const eventSourceRef = useRef<EventSourcePolyfill | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const [clientID] = useState<string>(() => uuidv4());
   const [mainWindow, setMainWindow] = useState<boolean>(false);
   const [autoScrolling, setAutoScrolling] = useState<boolean>(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState<number>(5);
   const [flipVertical, setFlipVertical] = useState<boolean>(false);
   const [flipHorizontal, setFlipHorizontal] = useState<boolean>(false);
-  const playingIntervalRef = useRef<number | null>(null);
-  const heartbeatIntervalRef = useRef<number | null>(null);
+  const playingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleInputScroll = useCallback(() => {
-    if (mainWindow) {
+    if (mainWindow && mainRef.current) {
       const scrollPosition = mainRef.current.scrollTop;
-      fetch('/api/v1/scroll', {
+      void fetch('/api/v1/scroll', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getCookie('jwt'),
+          Authorization: getCookie('jwt') ?? '',
         },
-        body: JSON.stringify({ clientID: clientID, position: scrollPosition }),
+        body: JSON.stringify({ clientID, position: scrollPosition }),
       });
     }
   }, [mainWindow, clientID]);
 
   useEffect(() => {
     heartbeatIntervalRef.current = setInterval(() => {
-      fetch('/api/v1/scroll', {
+      void fetch('/api/v1/scroll', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getCookie('jwt'),
+          Authorization: getCookie('jwt') ?? '',
         },
-        body: JSON.stringify({ clientID: clientID }),
+        body: JSON.stringify({ clientID }),
       });
-    }, 5000) as unknown as number;
+    }, HEARTBEAT_INTERVAL_MS);
     return () => {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
+      if (heartbeatIntervalRef.current !== null) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
     };
   }, [clientID]);
 
   const handleReceivedScroll = useCallback(
-    (event: MessageEvent) => {
+    (event: SseMessageEvent) => {
       const data = JSON.parse(event.data);
       if (data.main) {
         setMainWindow(data.main === clientID);
-      } else if (!mainWindow) {
+      } else if (!mainWindow && mainRef.current) {
         mainRef.current.scrollTo(0, Number(data.position));
         if (data.selectedDocument) {
           setSelectedDocument(data.selectedDocument);
@@ -87,32 +90,35 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   }, [mainWindow]);
 
   const handleInterval = useCallback(() => {
+    if (!mainRef.current) return;
     const currentScroll = mainRef.current.scrollTop;
     mainRef.current.scrollTo(0, Number(mainRef.current.scrollTop + autoScrollSpeed));
     if (mainRef.current.scrollTop === currentScroll) {
       handleKillInterval();
     }
-  }, [mainRef, autoScrollSpeed, handleKillInterval]);
+  }, [autoScrollSpeed, handleKillInterval]);
 
   useEffect(() => {
-    mainRef.current = document.querySelector('main');
-    mainRef.current.addEventListener('scroll', handleInputScroll);
+    const main = document.querySelector('main');
+    mainRef.current = main;
+    main?.addEventListener('scroll', handleInputScroll);
 
-    eventSourceRef.current = new EventSourcePolyfill(`/api/v1/scroll?clientID=${clientID}`, {
+    const source = new EventSourcePolyfill(`/api/v1/scroll?clientID=${clientID}`, {
       headers: {
-        Authorization: getCookie('jwt'),
+        Authorization: getCookie('jwt') ?? '',
       },
     });
-    eventSourceRef.current.addEventListener('message', handleReceivedScroll);
+    eventSourceRef.current = source;
+    source.addEventListener('message', handleReceivedScroll);
 
     return () => {
-      mainRef.current.removeEventListener('scroll', handleInputScroll);
-      if (eventSourceRef.current) {
-        eventSourceRef.current.removeEventListener('message', handleReceivedScroll);
-        eventSourceRef.current.close();
+      main?.removeEventListener('scroll', handleInputScroll);
+      source.removeEventListener('message', handleReceivedScroll);
+      source.close();
+      if (playingIntervalRef.current !== null) {
+        clearInterval(playingIntervalRef.current);
+        playingIntervalRef.current = null;
       }
-      clearInterval(playingIntervalRef.current);
-      playingIntervalRef.current = null;
     };
   }, [handleInputScroll, handleReceivedScroll, clientID]);
 
@@ -121,7 +127,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
       ? (
           await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/google/docs?id=${googleDoc.id}`, {
             headers: {
-              Authorization: getCookie('jwt'),
+              Authorization: getCookie('jwt') ?? '',
             },
           })
         ).data
@@ -131,7 +137,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   return (
     <>
       <div className='container mx-auto px-16'>
-        <h1 className='flex items-center justify-center text-3xl font-bold mb-6'>
+        <h1 className='mb-6 flex items-center justify-center text-3xl font-bold'>
           <Button variant='ghost' size='icon' onClick={() => setSelectedDocument(null)} className='mr-2'>
             <ArrowLeft className='h-6 w-6' />
           </Button>
@@ -142,7 +148,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
           <Card>
             <CardContent>
               <p className='text-base'>Unable to load document from Google, an error occurred.</p>
-              <p className='text-base text-destructive'>{error.message}</p>
+              <p className='text-destructive text-base'>{error.message}</p>
             </CardContent>
           </Card>
         ) : (
@@ -158,19 +164,19 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
 
       <Card className='fixed top-24 left-8 w-48'>
         <CardHeader>
-          <CardTitle className='text-sm text-center'>Control Panel</CardTitle>
+          <CardTitle className='text-center text-sm'>Control Panel</CardTitle>
         </CardHeader>
         <CardContent>
           {!mainWindow ? (
             <Button
               onClick={() => {
-                fetch('/api/v1/scroll', {
+                void fetch('/api/v1/scroll', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    Authorization: getCookie('jwt'),
+                    Authorization: getCookie('jwt') ?? '',
                   },
-                  body: JSON.stringify({ clientID: clientID, main: clientID }),
+                  body: JSON.stringify({ clientID, main: clientID }),
                 });
               }}
             >
@@ -185,8 +191,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
                   onClick={() => {
                     if (mainWindow && playingIntervalRef.current === null) {
                       setAutoScrolling(true);
-                      const interval = setInterval(handleInterval, 500);
-                      playingIntervalRef.current = interval as unknown as number;
+                      playingIntervalRef.current = setInterval(handleInterval, AUTO_SCROLL_TICK_MS);
                     }
                   }}
                 >

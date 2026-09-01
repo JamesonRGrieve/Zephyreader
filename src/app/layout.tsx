@@ -1,45 +1,32 @@
-import Head from '@/appwrapper/Head';
-import { SidebarContentProvider } from '@/appwrapper/SidebarContentManager';
-import { SidebarContext } from '@/appwrapper/SidebarContext';
-import { SidebarMain } from '@/appwrapper/SidebarMain';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { Toaster } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
-import '@/zod2gql';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import Head from '@/components/appwrapper/src/Head';
+import { SidebarContext } from '@/components/appwrapper/src/SidebarContext';
+import { SidebarMain } from '@/components/appwrapper/src/SidebarMain';
+import { ZephyrexApp } from 'zephyrex';
+import '@zephyrex/zod2gql';
 import { cookies } from 'next/headers';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { cn } from '~/lib/utils';
+import appConfig from '~/zephyrex.config';
 import './globals.css';
-import { metadata, viewport } from './metadata';
 
-// const inter = Inter({ subsets: ['latin'] });
+export { metadata, viewport } from './metadata';
 
 export default async function RootLayout({ children }: { children: ReactNode }): Promise<ReactNode> {
   const cookieStore = await cookies();
-  const theme = cookieStore.get('theme')?.value ?? process.env.NEXT_PUBLIC_THEME_DEFAULT_MODE;
+  const theme = cookieStore.get('theme')?.value ?? appConfig.app.defaultTheme ?? 'dark';
   const appearance = cookieStore.get('appearance')?.value ?? '';
   const htmlThemeClass = theme === 'dark' || theme === 'colorblind' || theme === 'colorblind-dark' ? theme : '';
 
-  if (process.env.LANDING_ONLY) {
-    return (
-      <html lang='en' className={htmlThemeClass} suppressHydrationWarning>
-        <Head />
-        <body className={cn(/*inter.className,*/ theme, appearance)}>{children}</body>
-      </html>
-    );
-  }
   return (
     <html lang='en' className={htmlThemeClass} suppressHydrationWarning>
       <Head />
-      <body className={cn(/*inter.className,*/ theme, appearance)}>
-        <SidebarContentProvider>
-          <SidebarProvider className='flex-1'>
-            <SidebarMain side='left' />
-            {children}
-            <Toaster />
-            {/* <ThemeSetter /> */}
-            <SidebarContext side='right' />
-          </SidebarProvider>
-        </SidebarContentProvider>
+      <body className={cn(theme, appearance)}>
+        <ZephyrexApp config={appConfig}>
+          <SidebarMain side='left' />
+          {children}
+          <SidebarContext side='right' />
+        </ZephyrexApp>
       </body>
     </html>
   );

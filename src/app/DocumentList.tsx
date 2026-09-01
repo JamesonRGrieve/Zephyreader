@@ -1,18 +1,11 @@
-import React from 'react';
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Star, StarOff } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-export type GoogleDoc = {
-  id: string;
-  name: string;
-  starred: boolean;
-  modifiedTime: string;
-  size: number;
-};
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'zephyrex/ui/table';
+import type { PrompterDocument } from '~/lib/documents';
 
 export type DocumentListProps = {
-  documents: GoogleDoc[];
-  setSelectedDocument: (doc: GoogleDoc) => void;
+  documents: PrompterDocument[];
+  setSelectedDocument: (doc: PrompterDocument) => void;
 };
 
 export default function DocumentList({ documents, setSelectedDocument }: DocumentListProps) {

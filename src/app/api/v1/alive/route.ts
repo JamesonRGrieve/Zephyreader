@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { NextResponse } from 'next/server';
 
-export async function GET(request) {
-  return NextResponse.json(global.__RUNTIME_CONFIG__ || {});
+export function GET(): NextResponse {
+  return NextResponse.json(globalThis.__RUNTIME_CONFIG__ ?? {});
 }

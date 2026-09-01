@@ -7,9 +7,9 @@ interface JwtPayload {
 
 const prisma = new PrismaClient();
 
-export default async function verifyJWT(request) {
+export default async function verifyJWT(request: Request) {
   // Extract the authorization header
-  const authToken = request.headers.get('authorization').replaceAll('Bearer ', '');
+  const authToken = request.headers.get('authorization')?.replaceAll('Bearer ', '');
 
   if (!authToken) {
     throw new Error('Missing authorization header.');

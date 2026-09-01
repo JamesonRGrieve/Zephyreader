@@ -8,7 +8,12 @@ export async function GET(request: NextRequest) {
 
     const google = new GoogleOAuth();
 
-    const documentBody = await google.getUserDocumentMarkdown(user.email, request.nextUrl.searchParams.get('id'));
+    const documentID = request.nextUrl.searchParams.get('id');
+    if (!documentID) {
+      return NextResponse.json({ error: 'Missing document id' }, { status: 400 });
+    }
+
+    const documentBody = await google.getUserDocumentMarkdown(user.email, documentID);
 
     //console.log(documentBody);
 
