@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiErrorResponse } from '~/lib/apiErrors';
 import verifyJWT from '../../../user/AuthProvider';
 import { NextcloudConnector } from '../../NextcloudConnector';
 
@@ -11,7 +12,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(docs);
   } catch (error) {
-    console.error('Error listing Nextcloud documents:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiErrorResponse(error);
   }
 }

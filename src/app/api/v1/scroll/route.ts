@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { NextResponse, type NextRequest } from 'next/server';
+import { apiErrorResponse } from '~/lib/apiErrors';
 import verifyJWT from '../user/AuthProvider';
 
 interface UserSession {
@@ -18,7 +19,12 @@ const HEARTBEAT_TIMEOUT_SECONDS = 60;
 const clients: Record<string, UserSession[]> = {};
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const user = await verifyJWT(request);
+  let user: Awaited<ReturnType<typeof verifyJWT>>;
+  try {
+    user = await verifyJWT(request);
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
   const newClientID = request.nextUrl.searchParams.get('clientID') ?? '';
   const encoder = new TextEncoder();
 
@@ -74,7 +80,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const user = await verifyJWT(request);
+  let user: Awaited<ReturnType<typeof verifyJWT>>;
+  try {
+    user = await verifyJWT(request);
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
   const data = await request.json();
   const sessions = clients[user.id] ?? [];
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiErrorResponse } from '~/lib/apiErrors';
 import { GoogleOAuth } from '../GoogleConnector';
 import verifyJWT from '../../user/AuthProvider';
 
@@ -19,7 +20,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(documentBody);
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiErrorResponse(error);
   }
 }
