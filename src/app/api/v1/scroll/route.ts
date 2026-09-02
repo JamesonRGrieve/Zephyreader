@@ -35,7 +35,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         clientID: newClientID,
         isMain: toBeMain,
         sendMessage: (data) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`)),
-        disconnect: (reason) => {
+        disconnect: () => {
           const list = clients[user.id] ?? [];
           const index = list.findIndex((session) => session.clientID === newClientID);
           if (index !== -1) list.splice(index, 1);

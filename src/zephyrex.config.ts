@@ -19,7 +19,7 @@ const teleprompterExtension: ZephyrexClientExtension = {
 
 const config: ZephyrexConfig = {
   server: {
-    baseUrl: process.env.NEXT_PUBLIC_AUTH_SERVER ?? 'http://localhost:6969/api',
+    baseUrl: process.env.NEXT_PUBLIC_AUTH_SERVER ?? 'http://localhost:6969/api/v1',
   },
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Open Teleprompt',

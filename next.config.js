@@ -7,7 +7,7 @@ const path = require('path');
 // imports resolve when Next transpiles the package (see `transpilePackages`).
 const ZEPHYREX_SRC = path.resolve(__dirname, 'node_modules/zephyrex/src');
 const APP_URI = process.env.APP_URI || 'http://localhost:6969';
-const AUTH_SERVER = process.env.AUTH_SERVER || `${APP_URI}/api`;
+const AUTH_SERVER = process.env.AUTH_SERVER || `${APP_URI}/api/v1`;
 const AUTH_WEB = process.env.AUTH_WEB || `${APP_URI}/user`;
 const ENV = (process.env.ENV || process.env.NODE_ENV || 'development').toLowerCase();
 
@@ -16,13 +16,11 @@ const nextConfig = {
   transpilePackages: ['zephyrex'],
   // The linked `zephyrex` framework ships raw source (not a built, typed
   // package); consuming it re-typechecks its internals, which carry pre-existing
-  // type skew (e.g. auth pins a slightly older `next`). The framework itself
-  // ignores build-time type/lint errors outside development for the same reason;
-  // mirror that so this consumer's own build is not gated on the dependency.
-  // Zephyrex's own code is kept type-clean (`pnpm typecheck` in dev).
-  eslint: {
-    ignoreDuringBuilds: ENV !== 'development',
-  },
+  // type skew (e.g. auth pins a slightly older `next`). Ignore build-time type
+  // errors outside development so this consumer's build is not gated on the
+  // dependency; Zephyrex's own code is kept type-clean (`pnpm typecheck` in dev).
+  // Next 16 removed the `eslint` config option (and `next lint`); ESLint runs via
+  // the CLI now, so there is no build-time lint gate to configure here.
   typescript: {
     ignoreBuildErrors: ENV !== 'development',
   },

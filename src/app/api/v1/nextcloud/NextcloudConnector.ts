@@ -9,6 +9,15 @@ export interface NextcloudDocument extends DocumentDescriptor {
   path: string;
 }
 
+// fast-xml-parser / WebDAV PROPFIND output is dynamically shaped; model it as a
+// recursive node tree so the parsing helpers stay typed without `any`.
+type XmlValue = string | number | boolean | null | undefined | XmlValue[] | { [key: string]: XmlValue };
+type XmlNode = { [key: string]: XmlValue };
+
+function isXmlNode(value: XmlValue): value is XmlNode {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export class NextcloudConnector {
   private baseUrl: string;
   private username: string;
@@ -49,24 +58,24 @@ export class NextcloudConnector {
     return path;
   }
 
-  private parseResponsePayload(data: string) {
+  private parseResponsePayload(data: string): XmlValue {
     const trimmed = data.trim();
     if (trimmed.startsWith('{')) {
       try {
-        return JSON.parse(trimmed);
+        return JSON.parse(trimmed) as XmlValue;
       } catch (error) {
         console.warn('Unable to parse Nextcloud response as JSON:', error);
       }
     }
 
-    return this.parser.parse(trimmed);
+    return this.parser.parse(trimmed) as XmlValue;
   }
 
-  private extractString(value: any): string {
+  private extractString(value: XmlValue): string {
     if (Array.isArray(value)) {
       return this.extractString(value[0]);
     }
-    if (value && typeof value === 'object') {
+    if (isXmlNode(value)) {
       if ('_text' in value) {
         return this.extractString(value._text);
       }
@@ -86,18 +95,21 @@ export class NextcloudConnector {
     return decoded.replace(/^\/+/, '');
   }
 
-  private extractResponses(parsed: any): any[] {
-    if (!parsed) return [];
+  private extractResponses(parsed: XmlValue): XmlValue {
+    if (!isXmlNode(parsed)) {
+      return [];
+    }
 
-    if (parsed.multistatus?.response) {
-      return parsed.multistatus.response;
+    const multistatus = parsed.multistatus;
+    if (isXmlNode(multistatus) && multistatus.response !== undefined) {
+      return multistatus.response;
     }
 
     const namespaced = parsed['D:multistatus'] || parsed['d:multistatus'];
-    if (namespaced) {
-      const multistatus = Array.isArray(namespaced) ? namespaced[0] : namespaced;
-      const response = multistatus['D:response'] || multistatus['d:response'] || multistatus.response;
-      if (response) {
+    const multistatusNode = Array.isArray(namespaced) ? namespaced[0] : namespaced;
+    if (isXmlNode(multistatusNode)) {
+      const response = multistatusNode['D:response'] || multistatusNode['d:response'] || multistatusNode.response;
+      if (response !== undefined) {
         return response;
       }
     }
@@ -105,12 +117,17 @@ export class NextcloudConnector {
     return [];
   }
 
-  private mapEntryToDocument(entry: any): NextcloudDocument | null {
-    const propstat = Array.isArray(entry.propstat || entry['D:propstat'])
-      ? (entry.propstat || entry['D:propstat'])[0]
-      : entry.propstat || entry['D:propstat'];
-    const prop = propstat?.prop || propstat?.['D:prop'] || {};
-    const resourceType = prop.resourcetype || prop['D:resourcetype'] || {};
+  private mapEntryToDocument(entry: XmlValue): NextcloudDocument | null {
+    if (!isXmlNode(entry)) {
+      return null;
+    }
+
+    const propstatRaw = entry.propstat || entry['D:propstat'];
+    const propstat = Array.isArray(propstatRaw) ? propstatRaw[0] : propstatRaw;
+    const propRaw = isXmlNode(propstat) ? propstat.prop || propstat['D:prop'] : undefined;
+    const prop: XmlNode = isXmlNode(propRaw) ? propRaw : {};
+    const resourceTypeRaw = prop.resourcetype || prop['D:resourcetype'];
+    const resourceType: XmlNode = isXmlNode(resourceTypeRaw) ? resourceTypeRaw : {};
     const isCollection = Boolean(resourceType.collection !== undefined || resourceType['D:collection'] !== undefined);
 
     if (isCollection) {
@@ -141,14 +158,15 @@ export class NextcloudConnector {
       responseType: 'text',
     });
 
-    const parsed = typeof response.data === 'string' ? this.parseResponsePayload(response.data) : response.data;
+    const parsed: XmlValue =
+      typeof response.data === 'string' ? this.parseResponsePayload(response.data) : (response.data as XmlValue);
     const entries = this.extractResponses(parsed);
     if (!entries) {
       return [];
     }
 
     const documents = (Array.isArray(entries) ? entries : [entries])
-      .map((entry: any) => this.mapEntryToDocument(entry))
+      .map((entry) => this.mapEntryToDocument(entry))
       .filter((doc): doc is NextcloudDocument => Boolean(doc));
 
     return documents;

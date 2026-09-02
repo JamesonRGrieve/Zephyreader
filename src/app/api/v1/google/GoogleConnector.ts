@@ -30,7 +30,7 @@ export class GoogleOAuth {
     this.magicLinkUrl = process.env.AUTH_WEB + '/close/google' || '';
   }
 
-  private async getRefreshToken(code: string, redirectUri: string) {
+  private async getRefreshToken(code: string) {
     let doneTrying = false;
     let response;
     while (!doneTrying) {
@@ -98,9 +98,6 @@ export class GoogleOAuth {
         })
         .catch((error) => error.response)
     ).data.files;
-    for (const file of files) {
-      //console.log(file);
-    }
     return files;
   }
 
@@ -139,8 +136,8 @@ export class GoogleOAuth {
     return `${this.magicLinkUrl}?token=${encodeURIComponent(token)}`;
   }
 
-  async callback(code: string, redirectUri: string) {
-    const { access_token, refresh_token } = await this.getRefreshToken(code, redirectUri);
+  async callback(code: string) {
+    const { access_token, refresh_token } = await this.getRefreshToken(code);
     console.log('Got Tokens: ', access_token, refresh_token);
     const userInfo = await this.getUserInfo(access_token);
     const email = userInfo.email.toLowerCase().trim();

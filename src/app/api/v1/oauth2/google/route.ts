@@ -3,11 +3,10 @@ import { GoogleOAuth } from '../../google/GoogleConnector';
 
 export async function POST(request: NextRequest) {
   try {
-    const { code, referrer } = await request.json();
-    const redirectUri = referrer || process.env.REDIRECT_URI || process.env.AUTH_WEB;
+    const { code } = await request.json();
 
     const google = new GoogleOAuth();
-    const result = await google.callback(code, redirectUri);
+    const result = await google.callback(code);
 
     return NextResponse.json({
       detail: result.magic_link,
