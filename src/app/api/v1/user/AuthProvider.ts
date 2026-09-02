@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { AuthError } from '~/lib/apiErrors';
+import { prisma } from '~/lib/prisma';
 
 interface JwtPayload {
   sub: string;
 }
-
-const prisma = new PrismaClient();
 
 export default async function verifyJWT(request: Request) {
   const authToken = request.headers.get('authorization')?.replaceAll('Bearer ', '');
