@@ -26,7 +26,11 @@ const nextConfig = {
     ignoreBuildErrors: ENV !== 'development',
   },
   // Keep file tracing scoped to this app; the surrounding directory is not a workspace.
-  outputFileTracingRoot: __dirname,
+  // The container build widens it to the parent that holds the linked sibling
+  // checkouts, so the standalone server also carries the framework's runtime deps.
+  outputFileTracingRoot: process.env.NEXT_OUTPUT_TRACING_ROOT || __dirname,
+  // Self-contained server bundle for the Containerfile's runtime stage.
+  ...(process.env.NEXT_OUTPUT_STANDALONE ? { output: 'standalone' } : {}),
   // Transpiling the linked framework source is memory-heavy. The custom `webpack`
   // hook below disables Next's auto-enabled build worker, which left the whole
   // compile in the main process (seen peaking past 24 GB RSS and OOM-killed), so

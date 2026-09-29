@@ -1,23 +1,11 @@
-// server-wrapper.js
-const { existsSync } = require('fs');
-const { config } = require('dotenv');
-const path = require('path');
-
-// Load environment variables from .env files or environment
-if (existsSync(path.join(process.cwd(), '.env.local'))) {
-  config({ path: '.env.local' });
-} else if (existsSync(path.join(process.cwd(), '.env'))) {
-  config({ path: '.env' });
-}
-
-// Create a global runtime config object
-global.__RUNTIME_CONFIG__ = {
-  // Add your runtime variables here
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Entry point of the container image: publishes runtime config (read by
+// /api/v1/alive) and starts Next's standalone server, which itself loads any
+// .env files. Configuration normally arrives as container env (--env-file).
+globalThis.__RUNTIME_CONFIG__ = {
   API_URI: process.env.API_URI,
   APP_URI: process.env.APP_URI,
   AUTH_URI: process.env.AUTH_URI,
-  // Add other variables you want to be available at runtime
 };
 
-// Now load and run the original Next.js server
 require('./server');

@@ -21,6 +21,24 @@ pnpm prisma migrate deploy        # creates the SQLite database
 pnpm dev                          # http://localhost:6969
 ```
 
+## Container
+
+`Containerfile` builds an OCI image with Podman. The linked siblings go in as
+named build contexts; the header of the file has the full build and run commands.
+
+```sh
+podman build -t zephyreader \
+  --build-context client-framework=../client-framework \
+  --build-context zod2gql=../zod2gql .
+podman build --target migrate -t zephyreader-migrate \
+  --build-context client-framework=../client-framework \
+  --build-context zod2gql=../zod2gql .
+```
+
+The runtime image is Next's standalone server running as `node`, with the
+SQLite database on a `/data` volume. Secrets come from `--env-file` at run time;
+`.containerignore` keeps `.env` files out of the build.
+
 ## Sign-in
 
 Google sign-in is OAuth 2.0 authorization code with PKCE, per the OAuth 2.0
