@@ -68,6 +68,7 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "ajv": "^8.20.0",
     "autoprefixer": "^10.6.1",
     "eslint": "^10.11.0",
@@ -80,7 +81,7 @@
     "storybook": "^10.6.0",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.2"
   }
 }
