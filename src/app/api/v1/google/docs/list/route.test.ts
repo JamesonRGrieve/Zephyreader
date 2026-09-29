@@ -9,6 +9,6 @@ describe('GET /api/v1/google/docs/list', () => {
     const res = await GET(new NextRequest('http://localhost/api/v1/google/docs/list'));
 
     expect(res.status).toBe(401);
-    await expect(res.json()).resolves.toEqual({ error: 'Missing authorization header.' });
+    await expect(res.json()).resolves.toEqual({ detail: 'No authentication provided.' });
   });
 });

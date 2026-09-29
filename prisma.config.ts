@@ -5,6 +5,9 @@ import { defineConfig } from 'prisma/config';
 // Runtime connections go through the driver adapter in src/lib/prisma.ts instead.
 export default defineConfig({
   schema: 'schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
+  },
   datasource: {
     url: process.env.DATABASE_URL ?? 'file:./oauth2.db',
   },

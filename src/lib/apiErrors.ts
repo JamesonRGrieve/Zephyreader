@@ -2,27 +2,30 @@
 import { NextResponse } from 'next/server';
 
 /**
- * Thrown when a request cannot be authenticated (missing/invalid token, unknown
- * user). Route handlers translate it to a 401 rather than a generic 500.
+ * An error whose status and `detail` are safe to show the client. Mirrors the
+ * server-framework error body: `{ "detail": "<message>" }`.
  */
-export class AuthError extends Error {
-  readonly status = 401;
-
-  constructor(message: string) {
-    super(message);
-    this.name = 'AuthError';
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly detail: string,
+  ) {
+    super(detail);
+    this.name = 'ApiError';
   }
 }
 
+const INTERNAL_ERROR_BODY = { detail: { message: 'Internal Server Error', code: 'internal_error' } };
+
 /**
- * Maps a thrown value to an API error response: authentication failures become
- * 401 (surfacing their message), everything else is logged server-side and
- * returned as an opaque 500 so internal details never leak to the client.
+ * Maps a thrown value to an API error response. An ApiError surfaces its status
+ * and detail; anything else is logged server-side and returned as the opaque
+ * server-framework 500 body so internal details never leak.
  */
 export function apiErrorResponse(error: unknown): NextResponse {
-  if (error instanceof AuthError) {
-    return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof ApiError) {
+    return NextResponse.json({ detail: error.detail }, { status: error.status });
   }
   console.error('API route error:', error);
-  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  return NextResponse.json(INTERNAL_ERROR_BODY, { status: 500 });
 }

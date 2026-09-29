@@ -1,8 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Mirrors the server-framework auth model this app stands in for: users, external
+// IdP links (tokens encrypted at rest), revocable sessions, and single-use OAuth
+// authorization state (PKCE verifier + OIDC nonce).
 
 datasource db {
   provider = "sqlite"
@@ -13,14 +12,62 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  firstName    String?
-  lastName     String?
-  accessToken  String
-  refreshToken String?
-  admin        Boolean  @default(false)
-  isActive     Boolean  @default(true)
+  id          String      @id @default(uuid())
+  email       String      @unique
+  firstName   String?
+  lastName    String?
+  displayName String?
+  imageUrl    String?
+  timezone    String?
+  language    String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  oauthLinks  OAuthLink[]
+  sessions    Session[]
+}
+
+/// A user's identity at an external IdP, keyed on the IdP's stable subject, never email.
+model OAuthLink {
+  id             String    @id @default(uuid())
+  userId         String
+  provider       String
+  providerUserId String
+  email          String?
+  /// AES-256-GCM ciphertext (see src/lib/auth/crypto.ts); never stored in the clear.
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  scopes         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+/// A login session. Its id is the session_key, carried in the JWT as `jti`.
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  grantType String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// One in-flight OAuth authorization. Single-use: deleted when the callback consumes it.
+model OAuthState {
+  stateHash    String   @id
+  bindingHash  String
+  provider     String
+  redirectUri  String
+  codeVerifier String
+  nonce        String
+  expiresAt    DateTime
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }

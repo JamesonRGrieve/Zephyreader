@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { User } from '@prisma/client';
 import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
-import verifyJWT from '../user/AuthProvider';
+import { authenticate } from '~/lib/auth/session';
 
 interface UserSession {
   clientID: string;
@@ -19,9 +20,9 @@ const HEARTBEAT_TIMEOUT_SECONDS = 60;
 const clients: Record<string, UserSession[]> = {};
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  let user: Awaited<ReturnType<typeof verifyJWT>>;
+  let user: User;
   try {
-    user = await verifyJWT(request);
+    user = await authenticate(request);
   } catch (error) {
     return apiErrorResponse(error);
   }
@@ -80,9 +81,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  let user: Awaited<ReturnType<typeof verifyJWT>>;
+  let user: User;
   try {
-    user = await verifyJWT(request);
+    user = await authenticate(request);
   } catch (error) {
     return apiErrorResponse(error);
   }

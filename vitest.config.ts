@@ -6,6 +6,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['src/__tests__/setup.ts'],
+    globalSetup: ['src/__tests__/globalSetup.ts'],
+    // Auth tests share one real SQLite database; run files serially so they don't interleave writes.
+    fileParallelism: false,
     globals: true,
     exclude: ['**/node_modules/**', '.next/**', 'e2e/**', 'tests/**', '**/*.stories.{ts,tsx}'],
   },

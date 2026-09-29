@@ -1,7 +1,6 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios';
-import { getCookie } from 'cookies-next/client';
 import { EventSourcePolyfill, type MessageEvent as SseMessageEvent } from 'event-source-polyfill';
 import { ArrowLeft, ArrowLeftRight, ArrowUpDown, ChevronRight, ChevronsRight, Play, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,6 +10,7 @@ import MarkdownBlock from '@/components/markdown/MarkdownBlock';
 import { Button } from 'zephyrex/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from 'zephyrex/ui/card';
 import { Slider } from 'zephyrex/ui/slider';
+import { apiUrl, authHeaders } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 
 export type TeleprompterProps = {
@@ -20,6 +20,16 @@ export type TeleprompterProps = {
 
 const HEARTBEAT_INTERVAL_MS = 5000;
 const AUTO_SCROLL_TICK_MS = 500;
+const SCROLL_ENDPOINT = apiUrl('/v1/scroll');
+
+/** Posts a scroll-sync message (position, heartbeat or control handover) for this window. */
+function postScroll(body: Record<string, unknown>): void {
+  void fetch(SCROLL_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+}
 
 export default function Teleprompter({ googleDoc, setSelectedDocument }: TeleprompterProps) {
   const eventSourceRef = useRef<EventSourcePolyfill | null>(null);
@@ -35,29 +45,12 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
 
   const handleInputScroll = useCallback(() => {
     if (mainWindow && mainRef.current) {
-      const scrollPosition = mainRef.current.scrollTop;
-      void fetch('/api/v1/scroll', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getCookie('jwt') ?? '',
-        },
-        body: JSON.stringify({ clientID, position: scrollPosition }),
-      });
+      postScroll({ clientID, position: mainRef.current.scrollTop });
     }
   }, [mainWindow, clientID]);
 
   useEffect(() => {
-    heartbeatIntervalRef.current = setInterval(() => {
-      void fetch('/api/v1/scroll', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getCookie('jwt') ?? '',
-        },
-        body: JSON.stringify({ clientID }),
-      });
-    }, HEARTBEAT_INTERVAL_MS);
+    heartbeatIntervalRef.current = setInterval(() => postScroll({ clientID }), HEARTBEAT_INTERVAL_MS);
     return () => {
       if (heartbeatIntervalRef.current !== null) {
         clearInterval(heartbeatIntervalRef.current);
@@ -103,10 +96,8 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
     mainRef.current = main;
     main?.addEventListener('scroll', handleInputScroll);
 
-    const source = new EventSourcePolyfill(`/api/v1/scroll?clientID=${clientID}`, {
-      headers: {
-        Authorization: getCookie('jwt') ?? '',
-      },
+    const source = new EventSourcePolyfill(`${SCROLL_ENDPOINT}?clientID=${encodeURIComponent(clientID)}`, {
+      headers: authHeaders(),
     });
     eventSourceRef.current = source;
     source.addEventListener('message', handleReceivedScroll);
@@ -124,13 +115,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
 
   const { data, isLoading, error } = useSWR(`/docs/${googleDoc.id}`, async () => {
     return googleDoc
-      ? (
-          await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/google/docs?id=${googleDoc.id}`, {
-            headers: {
-              Authorization: getCookie('jwt') ?? '',
-            },
-          })
-        ).data
+      ? (await axios.get(apiUrl('/v1/google/docs'), { params: { id: googleDoc.id }, headers: authHeaders() })).data
       : null;
   });
 
@@ -168,20 +153,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
         </CardHeader>
         <CardContent>
           {!mainWindow ? (
-            <Button
-              onClick={() => {
-                void fetch('/api/v1/scroll', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: getCookie('jwt') ?? '',
-                  },
-                  body: JSON.stringify({ clientID, main: clientID }),
-                });
-              }}
-            >
-              Assume Control
-            </Button>
+            <Button onClick={() => postScroll({ clientID, main: clientID })}>Assume Control</Button>
           ) : !autoScrolling ? (
             <div className='space-y-4'>
               <div className='flex justify-center space-x-2'>

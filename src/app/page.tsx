@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import { SidebarInset } from 'zephyrex/ui/sidebar';
 import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
+import { apiUrl, authHeaders } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 
 function isUnauthorized(error: unknown): boolean {
@@ -24,13 +25,7 @@ export default function Home() {
     // instead of firing an unauthorized request and rendering an empty list.
     jwt ? '/documents' : null,
     async () => {
-      return (
-        await axios.get(`${process.env.NEXT_PUBLIC_AUTH_SERVER}/google/docs/list`, {
-          headers: {
-            Authorization: jwt ?? '',
-          },
-        })
-      ).data;
+      return (await axios.get(apiUrl('/v1/google/docs/list'), { headers: authHeaders() })).data;
     },
   );
 

@@ -7,7 +7,8 @@ const path = require('path');
 // imports resolve when Next transpiles the package (see `transpilePackages`).
 const ZEPHYREX_SRC = path.resolve(__dirname, 'node_modules/zephyrex/src');
 const APP_URI = process.env.APP_URI || 'http://localhost:6969';
-const AUTH_SERVER = process.env.AUTH_SERVER || `${APP_URI}/api/v1`;
+// API origin + `/api`; clients append server-framework style `/v1/...` paths.
+const AUTH_SERVER = process.env.AUTH_SERVER || `${APP_URI}/api`;
 const AUTH_WEB = process.env.AUTH_WEB || `${APP_URI}/user`;
 const ENV = (process.env.ENV || process.env.NODE_ENV || 'development').toLowerCase();
 
@@ -26,6 +27,15 @@ const nextConfig = {
   },
   // Keep file tracing scoped to this app; the surrounding directory is not a workspace.
   outputFileTracingRoot: __dirname,
+  // Transpiling the linked framework source is memory-heavy. The custom `webpack`
+  // hook below disables Next's auto-enabled build worker, which left the whole
+  // compile in the main process (seen peaking past 24 GB RSS and OOM-killed), so
+  // re-enable the worker explicitly and turn on webpack's memory optimisations
+  // (next/dist/docs/01-app/02-guides/memory-usage.md).
+  experimental: {
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
+  },
   env: {
     NEXT_PUBLIC_APP_NAME: process.env.APP_NAME || 'Open Teleprompt',
     NEXT_PUBLIC_APP_DESCRIPTION: process.env.APP_DESCRIPTION || 'An open source teleprompting software.',
