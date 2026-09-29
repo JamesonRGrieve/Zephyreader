@@ -1,19 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
-import { GoogleOAuth } from '../../GoogleConnector';
 import verifyJWT from '../../../user/AuthProvider';
+import { GoogleOAuth } from '../../GoogleConnector';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await verifyJWT(request);
 
-    const google = new GoogleOAuth();
-
-    const docs = await google.listUserDocuments(user.email);
-
-    //console.log(docs);
-
-    return NextResponse.json(docs);
+    return NextResponse.json(await new GoogleOAuth().listUserDocuments(user.email));
   } catch (error) {
     return apiErrorResponse(error);
   }

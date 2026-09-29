@@ -1,24 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
-import { GoogleOAuth } from '../GoogleConnector';
 import verifyJWT from '../../user/AuthProvider';
+import { GoogleOAuth } from '../GoogleConnector';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await verifyJWT(request);
-
-    const google = new GoogleOAuth();
 
     const documentID = request.nextUrl.searchParams.get('id');
     if (!documentID) {
       return NextResponse.json({ error: 'Missing document id' }, { status: 400 });
     }
 
-    const documentBody = await google.getUserDocumentMarkdown(user.email, documentID);
-
-    //console.log(documentBody);
-
-    return NextResponse.json(documentBody);
+    return NextResponse.json(await new GoogleOAuth().getUserDocumentMarkdown(user.email, documentID));
   } catch (error) {
     return apiErrorResponse(error);
   }

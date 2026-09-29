@@ -15,7 +15,11 @@ function isUnauthorized(error: unknown): boolean {
 
 export default function Home() {
   const jwt = getCookie('jwt');
-  const { data: documents, error, isLoading } = useSWR<PrompterDocument[]>(
+  const {
+    data: documents,
+    error,
+    isLoading,
+  } = useSWR<PrompterDocument[]>(
     // Only fetch once we hold a token; without one, show the login prompt
     // instead of firing an unauthorized request and rendering an empty list.
     jwt ? '/documents' : null,

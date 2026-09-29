@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
 import verifyJWT from '../../user/AuthProvider';
 import { NextcloudConnector } from '../NextcloudConnector';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     await verifyJWT(request);
 

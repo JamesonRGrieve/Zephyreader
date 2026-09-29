@@ -1,12 +1,31 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { prisma } from '~/lib/prisma';
 
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_PEOPLE_URL = 'https://people.googleapis.com/v1/people/me';
+const GOOGLE_DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
+const GOOGLE_DOCS_EXPORT_URL = 'https://docs.google.com/feeds/download/documents/export/Export';
+const GOOGLE_DOC_MIME_TYPE = 'application/vnd.google-apps.document';
+const SESSION_TTL = '1d';
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+}
+
+interface PeopleResponse {
+  names: { givenName?: string; familyName?: string }[];
+  emailAddresses: { value: string }[];
+}
+
 interface UserInfo {
   email: string;
-  given_name: string;
-  family_name: string;
+  givenName: string;
+  familyName: string;
 }
+
 export interface GoogleDoc {
   id: string;
   name: string;
@@ -15,157 +34,93 @@ export interface GoogleDoc {
   size: number;
 }
 
-export class GoogleOAuth {
-  private clientId: string;
-  private clientSecret: string;
-  private jwtSecret: string;
-  private magicLinkUrl: string;
-
-  constructor() {
-    this.clientId = process.env.GOOGLE_CLIENT_ID || '';
-    this.clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-    this.jwtSecret = process.env.JWT_SECRET || '';
-    this.magicLinkUrl = process.env.AUTH_WEB + '/close/google' || '';
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is not set in environment variables`);
   }
+  return value;
+}
 
-  private async getRefreshToken(code: string) {
-    let doneTrying = false;
-    let response;
-    while (!doneTrying) {
-      try {
-        response = await axios
-          .post('https://accounts.google.com/o/oauth2/token', {
-            code: code.replaceAll('%2F', '/').replaceAll('%3D', '=').replaceAll('%3F', '?').replaceAll('%3D', '='),
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
-            redirect_uri: process.env.AUTH_WEB + '/close/google',
-            grant_type: 'authorization_code',
-          })
-          .catch((error) => error.response);
-      } catch (exception) {
-        console.error(exception);
-      }
-      if (response.status !== 200) {
-        console.error("Failed to get authorization_code from Google's OAuth2 API.");
-        console.log(response.data);
-        doneTrying = true;
-      } else {
-        console.log('Done getting authorization_code: ', response.data);
-        doneTrying = true;
-      }
-    }
+export class GoogleOAuth {
+  private readonly clientId = requireEnv('GOOGLE_CLIENT_ID');
+  private readonly clientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
+  private readonly jwtSecret = requireEnv('JWT_SECRET');
+  private readonly redirectUri = `${requireEnv('AUTH_WEB')}/close/google`;
 
+  private async exchangeCode(code: string): Promise<TokenResponse> {
+    const response = await axios.post<TokenResponse>(GOOGLE_TOKEN_URL, {
+      code: decodeURIComponent(code),
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      redirect_uri: this.redirectUri,
+      grant_type: 'authorization_code',
+    });
     return response.data;
   }
 
   private async getUserInfo(accessToken: string): Promise<UserInfo> {
-    const response = await axios
-      .get('https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      .catch((error) => error.response);
-    //console.log('Got User Data: ', response.data);
+    const { data } = await axios.get<PeopleResponse>(GOOGLE_PEOPLE_URL, {
+      params: { personFields: 'names,emailAddresses' },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const [name] = data.names;
     return {
-      given_name: response.data.names[0].givenName,
-      family_name: response.data.names[0].familyName,
-      email: response.data.emailAddresses[0].value,
+      givenName: (name?.givenName ?? '').trim(),
+      familyName: (name?.familyName ?? '').trim(),
+      email: data.emailAddresses[0].value.toLowerCase().trim(),
     };
+  }
+
+  private async getAccessToken(email: string): Promise<string> {
+    const record = await prisma.user.findUnique({
+      where: { email },
+      select: { accessToken: true },
+    });
+    if (!record) {
+      throw new Error(`No user found for email ${email}.`);
+    }
+    return record.accessToken;
   }
 
   async listUserDocuments(email: string): Promise<GoogleDoc[]> {
-    const record = await prisma.user.findFirst({
-      where: { email: email },
-      select: {
-        accessToken: true,
+    const accessToken = await this.getAccessToken(email);
+    const { data } = await axios.get<{ files: GoogleDoc[] }>(GOOGLE_DRIVE_FILES_URL, {
+      params: {
+        q: `mimeType='${GOOGLE_DOC_MIME_TYPE}'`,
+        fields: 'files(id, name, description, starred, size, modifiedTime)',
       },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!record) {
-      throw new Error(`No user found for email ${email}.`);
-    }
-    const { accessToken } = record;
-    const files = (
-      await axios
-        .get('https://www.googleapis.com/drive/v3/files', {
-          params: {
-            q: `mimeType='application/vnd.google-apps.document'`,
-            fields: 'files(id, name, description, starred, size, modifiedTime)',
-          },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-        .catch((error) => error.response)
-    ).data.files;
-    return files;
+    return data.files;
   }
 
-  async getUserDocumentMarkdown(email: string, documentID: string) {
-    const record = await prisma.user.findFirst({
-      where: { email: email },
-      select: {
-        accessToken: true,
-      },
+  async getUserDocumentMarkdown(email: string, documentID: string): Promise<string> {
+    const accessToken = await this.getAccessToken(email);
+    const { data } = await axios.get<string>(GOOGLE_DOCS_EXPORT_URL, {
+      params: { id: documentID, exportFormat: 'markdown' },
+      headers: { Authorization: `Bearer ${accessToken}` },
+      responseType: 'text',
     });
-    if (!record) {
-      throw new Error(`No user found for email ${email}.`);
-    }
-    const { accessToken } = record;
-    const documentBody = (
-      await axios
-        .get(`https://docs.google.com/feeds/download/documents/export/Export`, {
-          params: {
-            id: documentID,
-            exportFormat: 'markdown',
-          },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-        .catch((error) => error.response)
-    )?.data;
-    return documentBody;
-  }
-
-  private createJWT(userId: string): string {
-    return jwt.sign({ sub: userId }, this.jwtSecret, { expiresIn: '1d' });
+    return data;
   }
 
   private createMagicLink(token: string): string {
-    return `${this.magicLinkUrl}?token=${encodeURIComponent(token)}`;
+    return `${this.redirectUri}?token=${encodeURIComponent(token)}`;
   }
 
-  async callback(code: string) {
-    const { access_token, refresh_token } = await this.getRefreshToken(code);
-    console.log('Got Tokens: ', access_token, refresh_token);
-    const userInfo = await this.getUserInfo(access_token);
-    const email = userInfo.email.toLowerCase().trim();
-    const { id: userID } = await prisma.user.upsert({
-      where: { email: email },
-      update: {
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        firstName: userInfo.given_name.trim(),
-        lastName: userInfo.family_name.trim(),
-      },
-      create: {
-        email: email,
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        firstName: userInfo.given_name.trim(),
-        lastName: userInfo.family_name.trim(),
-      },
-      select: {
-        id: true,
-      },
+  async callback(code: string): Promise<{ magic_link: string; email: string; token: string }> {
+    const { access_token: accessToken, refresh_token: refreshToken } = await this.exchangeCode(code);
+    const { email, givenName, familyName } = await this.getUserInfo(accessToken);
+    const profile = { accessToken, refreshToken, firstName: givenName, lastName: familyName };
+    const { id } = await prisma.user.upsert({
+      where: { email },
+      update: profile,
+      create: { email, ...profile },
+      select: { id: true },
     });
 
-    const token = this.createJWT(userID);
-    const magic_link = this.createMagicLink(token);
-
-    return {
-      magic_link,
-      email,
-      token,
-    };
+    const token = jwt.sign({ sub: id }, this.jwtSecret, { expiresIn: SESSION_TTL });
+    return { magic_link: this.createMagicLink(token), email, token };
   }
 }

@@ -1,6 +1,7 @@
-import axios, { AxiosInstance } from 'axios';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import axios, { type AxiosInstance } from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-import { DocumentDescriptor } from '~/lib/documents';
+import type { DocumentDescriptor } from '~/lib/documents';
 
 export interface NextcloudDocument extends DocumentDescriptor {
   provider: 'nextcloud';
@@ -140,8 +141,7 @@ export class NextcloudConnector {
 
     return {
       id: relativePath,
-      name:
-        this.extractString(prop.displayname || prop['D:displayname']) || relativePath.split('/').pop() || relativePath,
+      name: this.extractString(prop.displayname || prop['D:displayname']) || relativePath.split('/').pop() || relativePath,
       modifiedTime: this.extractString(prop.getlastmodified || prop['D:getlastmodified']) || '',
       size: Number(this.extractString(prop.getcontentlength || prop['D:getcontentlength'] || '0')),
       path: normalizedPath,

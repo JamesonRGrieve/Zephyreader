@@ -1,12 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { NextResponse, type NextRequest } from 'next/server';
+import { apiErrorResponse } from '~/lib/apiErrors';
 import { GoogleOAuth } from '../../google/GoogleConnector';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { code } = await request.json();
+    const { code } = (await request.json()) as { code?: string };
+    if (!code) {
+      return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 });
+    }
 
-    const google = new GoogleOAuth();
-    const result = await google.callback(code);
+    const result = await new GoogleOAuth().callback(code);
 
     return NextResponse.json({
       detail: result.magic_link,
@@ -14,7 +18,6 @@ export async function POST(request: NextRequest) {
       token: result.token,
     });
   } catch (error) {
-    console.error('OAuth login error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiErrorResponse(error);
   }
 }
