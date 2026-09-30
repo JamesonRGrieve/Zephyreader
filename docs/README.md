@@ -15,6 +15,8 @@ Requires Node 24+ and pnpm. The Zephyrex packages (`zephyrex`, `@zephyrex/auth`,
 `@jgrieve/forms`, `zod2gql`) aren't on a registry yet, so `client-framework`, `auth`,
 `dynamic-form` and `zod2gql` must be checked out beside this repo with their
 `dist/` built (`pnpm compile` in each); pnpm installs them as injected copies.
+pnpm keeps those copies as they were at install time, so after rebuilding a
+sibling's `dist/` run `pnpm refresh:zephyrex` to pick up the change.
 
 ```sh
 cp .env.example .env              # fill in the Google client, JWT_SECRET, OAUTH_TOKEN_ENCRYPTION_KEY

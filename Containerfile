@@ -112,6 +112,8 @@ WORKDIR /srv/app
 COPY --from=builder --chown=node:node /src/app/.next/standalone /srv/app/
 COPY --from=builder --chown=node:node /src/app/.next/static /srv/app/.next/static
 COPY --from=builder --chown=node:node /src/app/public /srv/app/public
+# Read from the working directory at request time by /docs/privacy.
+COPY --from=builder --chown=node:node /src/app/src/content /srv/app/src/content
 COPY --from=builder --chown=node:node /src/app/server-wrapper.js /srv/app/server-wrapper.js
 RUN mkdir -p /data && chown node:node /data
 VOLUME /data

@@ -20,6 +20,7 @@
     "prettier-fix": "prettier --write .",
     "fix": "prettier --write . && eslint . --fix",
     "typecheck": "tsc --noEmit",
+    "refresh:zephyrex": "pnpm update --no-save zephyrex @zephyrex/auth @jgrieve/forms zod2gql",
     "pretest": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
