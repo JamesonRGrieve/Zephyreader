@@ -288,7 +288,7 @@ export class OAuthLogin {
 function configuredRedirectUris(): string[] {
   const configured = process.env.OAUTH_REDIRECT_URIS;
   if (configured) return configured.split(',').map((uri) => uri.trim());
-  return [`${requireEnv('AUTH_WEB')}/close/google`];
+  return [`${requireEnv('AUTH_URI')}/close/google`];
 }
 
 export const oauthLogin = new OAuthLogin(

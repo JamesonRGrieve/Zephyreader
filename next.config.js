@@ -1,69 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-const path = require('path');
-
-// The Zephyrex framework is consumed as a source-exported package (npm link).
-// Its internal modules import via the `@/*` alias, which resolves to the
-// framework's own `src`. We point `@` at the linked package's source so those
-// imports resolve when Next transpiles the package (see `transpilePackages`).
-const ZEPHYREX_SRC = path.resolve(__dirname, 'node_modules/zephyrex/src');
+// Env names follow the Zephyrex framework's (APP_URI / API_URI / AUTH_URI).
 const APP_URI = process.env.APP_URI || 'http://localhost:6969';
 // API origin + `/api`; clients append server-framework style `/v1/...` paths.
-const AUTH_SERVER = process.env.AUTH_SERVER || `${APP_URI}/api`;
-const AUTH_WEB = process.env.AUTH_WEB || `${APP_URI}/user`;
-const ENV = (process.env.ENV || process.env.NODE_ENV || 'development').toLowerCase();
+const API_URI = process.env.API_URI || `${APP_URI}/api`;
+// Root of the framework's auth UI (login, OAuth close pages).
+const AUTH_URI = process.env.AUTH_URI || `${APP_URI}/user`;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['zephyrex'],
-  // The linked `zephyrex` framework ships raw source (not a built, typed
-  // package); consuming it re-typechecks its internals, which carry pre-existing
-  // type skew (e.g. auth pins a slightly older `next`). Ignore build-time type
-  // errors outside development so this consumer's build is not gated on the
-  // dependency; Zephyrex's own code is kept type-clean (`pnpm typecheck` in dev).
-  // Next 16 removed the `eslint` config option (and `next lint`); ESLint runs via
-  // the CLI now, so there is no build-time lint gate to configure here.
-  typescript: {
-    ignoreBuildErrors: ENV !== 'development',
-  },
   // Keep file tracing scoped to this app; the surrounding directory is not a workspace.
-  // The container build widens it to the parent that holds the linked sibling
-  // checkouts, so the standalone server also carries the framework's runtime deps.
-  outputFileTracingRoot: process.env.NEXT_OUTPUT_TRACING_ROOT || __dirname,
+  outputFileTracingRoot: __dirname,
   // Self-contained server bundle for the Containerfile's runtime stage.
   ...(process.env.NEXT_OUTPUT_STANDALONE ? { output: 'standalone' } : {}),
-  // Transpiling the linked framework source is memory-heavy. The custom `webpack`
-  // hook below disables Next's auto-enabled build worker, which left the whole
-  // compile in the main process (seen peaking past 24 GB RSS and OOM-killed), so
-  // re-enable the worker explicitly and turn on webpack's memory optimisations
-  // (next/dist/docs/01-app/02-guides/memory-usage.md).
-  experimental: {
-    webpackBuildWorker: true,
-    webpackMemoryOptimizations: true,
-  },
   env: {
     NEXT_PUBLIC_APP_NAME: process.env.APP_NAME || 'Open Teleprompt',
     NEXT_PUBLIC_APP_DESCRIPTION: process.env.APP_DESCRIPTION || 'An open source teleprompting software.',
     NEXT_PUBLIC_APP_URI: APP_URI,
     APP_URI,
-    NEXT_PUBLIC_AUTH_SERVER: AUTH_SERVER,
-    AUTH_SERVER,
-    NEXT_PUBLIC_AUTH_URI: AUTH_WEB,
-    AUTH_WEB,
+    NEXT_PUBLIC_API_URI: API_URI,
+    API_URI,
+    NEXT_PUBLIC_AUTH_URI: AUTH_URI,
+    AUTH_URI,
     NEXT_PUBLIC_THEME_DEFAULT_MODE: process.env.DEFAULT_THEME_MODE || 'dark',
-  },
-  // Built with webpack (see the `--webpack` flag in package.json scripts):
-  // Turbopack mis-resolves the npm-linked framework (source package living
-  // outside this app dir) and its absolute-path aliases.
-  webpack: (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      // Framework-internal alias -> linked package source.
-      '@': ZEPHYREX_SRC,
-      // This app's own alias.
-      '~': path.resolve(__dirname, 'src'),
-    };
-    return config;
   },
 };
 

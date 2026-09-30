@@ -15,7 +15,7 @@ export default function setup(): () => void {
   process.env.DATABASE_URL = `file:${path.join(dir, 'test.db')}`;
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.OAUTH_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
-  process.env.AUTH_WEB = 'http://localhost/user';
+  process.env.AUTH_URI = 'http://localhost/user';
   process.env.GOOGLE_CLIENT_ID = 'test-google-client';
   process.env.GOOGLE_CLIENT_SECRET = 'test-google-secret';
 

@@ -14,8 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Mirrors tsconfig paths: `@` → the linked framework source, `~` → this app.
-      '@': path.resolve(__dirname, './node_modules/zephyrex/src'),
+      // Mirrors the tsconfig `~/*` path to this app's source.
       '~': path.resolve(__dirname, './src'),
     },
   },

@@ -11,8 +11,10 @@ payloads and error bodies, so the framework's client works against it unchanged.
 
 ## Running it
 
-Requires Node 24+ and pnpm, with [client-framework](https://github.com/JamesonRGrieve/ClientFramework)
-and zod2gql checked out as siblings of this repo (they are linked, not installed).
+Requires Node 24+ and pnpm. The Zephyrex packages (`zephyrex`, `@zephyrex/auth`,
+`@jgrieve/forms`, `zod2gql`) aren't on a registry yet, so `client-framework`, `auth`,
+`dynamic-form` and `zod2gql` must be checked out beside this repo with their
+`dist/` built (`pnpm compile` in each); pnpm installs them as injected copies.
 
 ```sh
 cp .env.example .env              # fill in the Google client, JWT_SECRET, OAUTH_TOKEN_ENCRYPTION_KEY
@@ -23,16 +25,15 @@ pnpm dev                          # http://localhost:6969
 
 ## Container
 
-`Containerfile` builds an OCI image with Podman. The linked siblings go in as
-named build contexts; the header of the file has the full build and run commands.
+`Containerfile` builds an OCI image with Podman. The four sibling packages go in
+as named build contexts and are compiled inside the image; the header of the file
+has the full build and run commands.
 
 ```sh
-podman build -t zephyreader \
-  --build-context client-framework=../client-framework \
-  --build-context zod2gql=../zod2gql .
-podman build --target migrate -t zephyreader-migrate \
-  --build-context client-framework=../client-framework \
-  --build-context zod2gql=../zod2gql .
+CONTEXTS="--build-context zod2gql=../zod2gql --build-context dynamic-form=../dynamic-form \
+  --build-context auth=../auth --build-context client-framework=../client-framework"
+podman build -t zephyreader $CONTEXTS .
+podman build --target migrate -t zephyreader-migrate $CONTEXTS .
 ```
 
 The runtime image is Next's standalone server running as `node`, with the

@@ -6,8 +6,8 @@ import { ArrowLeft, ArrowLeftRight, ArrowUpDown, ChevronRight, ChevronsRight, Pl
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { v4 as uuidv4 } from 'uuid';
-import MarkdownBlock from '@/components/markdown/MarkdownBlock';
 import { Button } from 'zephyrex/ui/button';
+import MarkdownBlock from 'zephyrex/components/markdown/MarkdownBlock';
 import { Card, CardContent, CardHeader, CardTitle } from 'zephyrex/ui/card';
 import { Slider } from 'zephyrex/ui/slider';
 import { apiUrl, authHeaders } from '~/lib/apiClient';
