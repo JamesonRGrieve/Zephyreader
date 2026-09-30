@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
 import { oauthLogin } from '~/lib/auth/oauth';
+import { setSessionCookies } from '~/lib/auth/sessionCookies';
 import { optionalString, readJsonObject, requiredString } from '~/lib/requestBody';
 import { clearBindingCookie, OAUTH_BINDING_COOKIE } from '../bindingCookie';
 
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       token: session.token,
     });
     clearBindingCookie(response);
+    // A browser login: the session rides in HttpOnly cookies (the body keeps `token` for API clients).
+    setSessionCookies(response, session.token);
     return response;
   } catch (error) {
     return apiErrorResponse(error);

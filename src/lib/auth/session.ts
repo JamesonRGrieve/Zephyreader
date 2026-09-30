@@ -8,6 +8,8 @@
 import type { User } from '@prisma/client';
 import { errors, jwtVerify, SignJWT } from 'jose';
 import { ApiError } from '~/lib/apiErrors';
+import { constantTimeEqual } from '~/lib/auth/crypto';
+import { CSRF_COOKIE, CSRF_HEADER, parseCookies, SAFE_METHODS, SESSION_COOKIE } from '~/lib/auth/sessionCookies';
 import { requireEnv } from '~/lib/env';
 import { prisma } from '~/lib/prisma';
 
@@ -69,19 +71,51 @@ async function verifyToken(token: string): Promise<{ sub: string; jti: string }>
   }
 }
 
-/** Resolves the request's `Authorization: Bearer <jwt>` to its active user. */
-export async function authenticate(request: Request): Promise<User> {
+/**
+ * The request's session JWT, in server-framework's precedence: an explicit
+ * `Authorization` header, then `X-API-Key`, then the `zx_session` cookie. The
+ * cookie counts only when neither header is present (a bad explicit header is
+ * never rescued by it), and a cookie-authenticated unsafe request must echo
+ * `zx_csrf` in `X-CSRF-Token` (checked before the token, as the server does).
+ */
+function presentedToken(request: Request): string {
   const header = request.headers.get('authorization');
-  if (!header) throw new ApiError(401, 'No authentication provided.');
-  if (!header.startsWith(BEARER_PREFIX)) {
-    throw new ApiError(401, 'Unsupported authorization method; use a Bearer token');
+  if (header) {
+    if (!header.startsWith(BEARER_PREFIX)) {
+      throw new ApiError(401, 'Unsupported authorization method; use a Bearer token');
+    }
+    return header.slice(BEARER_PREFIX.length);
   }
+  // This app issues no API keys, so any presented key is invalid.
+  if (request.headers.has('x-api-key')) throw new ApiError(401, 'Invalid API key');
 
-  const { sub, jti } = await verifyToken(header.slice(BEARER_PREFIX.length));
+  const cookies = parseCookies(request.headers.get('cookie'));
+  const token = cookies.get(SESSION_COOKIE);
+  if (!token) throw new ApiError(401, 'No authentication provided.');
+  if (!SAFE_METHODS.has(request.method)) {
+    const expected = cookies.get(CSRF_COOKIE) ?? '';
+    const offered = request.headers.get(CSRF_HEADER) ?? '';
+    if (!expected || !constantTimeEqual(expected, offered)) throw new ApiError(403, 'CSRF token missing or invalid');
+  }
+  return token;
+}
+
+/** Resolves the request's credentials to its active user and live session. */
+export async function authenticateSession(request: Request): Promise<{ user: User; sessionKey: string }> {
+  const { sub, jti } = await verifyToken(presentedToken(request));
   const session = await prisma.session.findUnique({ where: { id: jti }, include: { user: true } });
   if (!session || session.revoked || session.expiresAt <= new Date() || session.userId !== sub) {
     throw new ApiError(401, 'Session has been revoked');
   }
   if (!session.user.active) throw new ApiError(403, 'User account is disabled');
-  return session.user;
+  return { user: session.user, sessionKey: session.id };
+}
+
+export async function authenticate(request: Request): Promise<User> {
+  return (await authenticateSession(request)).user;
+}
+
+/** Ends a session: later requests carrying its JWT get 401. */
+export async function revokeSession(sessionKey: string): Promise<void> {
+  await prisma.session.update({ where: { id: sessionKey }, data: { revoked: true } });
 }

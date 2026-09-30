@@ -1,13 +1,12 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios';
-import { getCookie } from 'cookies-next/client';
 import { useState } from 'react';
 import useSWR from 'swr';
 import { SidebarInset } from 'zephyrex/ui/sidebar';
 import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
-import { apiUrl, authHeaders } from '~/lib/apiClient';
+import { apiUrl, hasSession } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 
 function isUnauthorized(error: unknown): boolean {
@@ -15,23 +14,21 @@ function isUnauthorized(error: unknown): boolean {
 }
 
 export default function Home() {
-  const jwt = getCookie('jwt');
+  const signedIn = hasSession();
   const {
     data: documents,
     error,
     isLoading,
   } = useSWR<PrompterDocument[]>(
-    // Only fetch once we hold a token; without one, show the login prompt
-    // instead of firing an unauthorized request and rendering an empty list.
-    jwt ? '/documents' : null,
-    async () => {
-      return (await axios.get(apiUrl('/v1/google/docs/list'), { headers: authHeaders() })).data;
-    },
+    // Only fetch once this browser holds a session; without one, show the login
+    // prompt instead of firing an unauthorized request and rendering an empty list.
+    signedIn ? '/documents' : null,
+    async () => (await axios.get(apiUrl('/v1/google/docs/list'))).data,
   );
 
   const [selectedDocument, setSelectedDocument] = useState<PrompterDocument | null>(null);
 
-  const needsLogin = !jwt || isUnauthorized(error);
+  const needsLogin = !signedIn || isUnauthorized(error);
   const authUri = process.env.NEXT_PUBLIC_AUTH_URI ?? '/user';
 
   return (

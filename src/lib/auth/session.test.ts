@@ -3,7 +3,7 @@
 import { decodeJwt, SignJWT } from 'jose';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '~/lib/apiErrors';
-import { authenticate, issueSession } from '~/lib/auth/session';
+import { authenticate, issueSession, revokeSession } from '~/lib/auth/session';
 import { prisma } from '~/lib/prisma';
 
 const request = (authorization?: string) =>
@@ -89,5 +89,60 @@ describe('authenticate', () => {
     const { user, session } = await signedIn();
     await prisma.user.update({ where: { id: user.id }, data: { active: false } });
     await expectDetail(authenticate(request(`Bearer ${session.token}`)), 403, 'User account is disabled');
+  });
+});
+
+describe('authenticate via the zx_session cookie', () => {
+  const CSRF = 'csrf-token-value';
+  const cookieRequest = (token: string, init: { method?: string; headers?: Record<string, string> } = {}) =>
+    new Request('http://localhost/api/v1/scroll', {
+      method: init.method ?? 'GET',
+      headers: { cookie: `zx_session=${token}; zx_csrf=${CSRF}`, ...init.headers },
+    });
+
+  it('accepts the session cookie on a safe request without a CSRF header', async () => {
+    const { user, session } = await signedIn();
+    await expect(authenticate(cookieRequest(session.token))).resolves.toMatchObject({ id: user.id });
+  });
+
+  it('requires X-CSRF-Token matching zx_csrf on a cookie-authenticated write', async () => {
+    const { user, session } = await signedIn();
+    await expectDetail(authenticate(cookieRequest(session.token, { method: 'POST' })), 403, 'CSRF token missing or invalid');
+    await expectDetail(
+      authenticate(cookieRequest(session.token, { method: 'POST', headers: { 'x-csrf-token': 'wrong' } })),
+      403,
+      'CSRF token missing or invalid',
+    );
+    await expect(
+      authenticate(cookieRequest(session.token, { method: 'POST', headers: { 'x-csrf-token': CSRF } })),
+    ).resolves.toMatchObject({ id: user.id });
+  });
+
+  it('checks CSRF before the token, as the server middleware does', async () => {
+    await expectDetail(authenticate(cookieRequest('not-a-jwt', { method: 'DELETE' })), 403, 'CSRF token missing or invalid');
+  });
+
+  it('lets an explicit Authorization header win, and never rescues a bad one with the cookie', async () => {
+    const { session } = await signedIn();
+    await expectDetail(
+      authenticate(cookieRequest(session.token, { headers: { authorization: 'Bearer not-a-jwt' } })),
+      401,
+      'Invalid token',
+    );
+  });
+
+  it('does not fall back to the cookie when an API key is presented', async () => {
+    const { session } = await signedIn();
+    await expectDetail(
+      authenticate(cookieRequest(session.token, { headers: { 'x-api-key': 'k' } })),
+      401,
+      'Invalid API key',
+    );
+  });
+
+  it('rejects a revoked session carried in the cookie', async () => {
+    const { session } = await signedIn();
+    await revokeSession(session.sessionKey);
+    await expectDetail(authenticate(cookieRequest(session.token)), 401, 'Session has been revoked');
   });
 });

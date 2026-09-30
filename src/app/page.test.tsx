@@ -14,7 +14,7 @@ vi.mock('./Teleprompter', () => ({ default: () => <div data-testid='teleprompter
 import Home from './page';
 
 describe('Home', () => {
-  it('shows a login prompt (and no document list) when there is no JWT cookie', () => {
+  it('shows a login prompt (and no document list) when the browser holds no session', () => {
     vi.mocked(getCookie).mockReturnValue(undefined);
 
     render(<Home />);

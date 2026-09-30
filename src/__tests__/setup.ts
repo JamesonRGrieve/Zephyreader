@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
 }));
 
-// The app reads the JWT via the client entrypoint.
+// The app reads the JS-readable zx_csrf session cookie via the client entrypoint.
 vi.mock('cookies-next/client', () => ({
   getCookie: vi.fn(() => undefined),
   setCookie: vi.fn(),

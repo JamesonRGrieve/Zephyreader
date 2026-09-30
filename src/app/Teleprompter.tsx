@@ -1,7 +1,6 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import axios from 'axios';
-import { EventSourcePolyfill, type MessageEvent as SseMessageEvent } from 'event-source-polyfill';
 import { ArrowLeft, ArrowLeftRight, ArrowUpDown, ChevronRight, ChevronsRight, Play, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
@@ -10,7 +9,7 @@ import { Button } from 'zephyrex/ui/button';
 import MarkdownBlock from 'zephyrex/components/markdown/MarkdownBlock';
 import { Card, CardContent, CardHeader, CardTitle } from 'zephyrex/ui/card';
 import { Slider } from 'zephyrex/ui/slider';
-import { apiUrl, authHeaders } from '~/lib/apiClient';
+import { apiUrl, sessionHeaders } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 
 export type TeleprompterProps = {
@@ -26,13 +25,13 @@ const SCROLL_ENDPOINT = apiUrl('/v1/scroll');
 function postScroll(body: Record<string, unknown>): void {
   void fetch(SCROLL_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
     body: JSON.stringify(body),
   });
 }
 
 export default function Teleprompter({ googleDoc, setSelectedDocument }: TeleprompterProps) {
-  const eventSourceRef = useRef<EventSourcePolyfill | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
   const [clientID] = useState<string>(() => uuidv4());
   const [mainWindow, setMainWindow] = useState<boolean>(false);
@@ -60,7 +59,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   }, [clientID]);
 
   const handleReceivedScroll = useCallback(
-    (event: SseMessageEvent) => {
+    (event: MessageEvent<string>) => {
       const data = JSON.parse(event.data);
       if (data.main) {
         setMainWindow(data.main === clientID);
@@ -96,9 +95,8 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
     mainRef.current = main;
     main?.addEventListener('scroll', handleInputScroll);
 
-    const source = new EventSourcePolyfill(`${SCROLL_ENDPOINT}?clientID=${encodeURIComponent(clientID)}`, {
-      headers: authHeaders(),
-    });
+    // Same-origin: the browser sends the session cookie with the stream request.
+    const source = new EventSource(`${SCROLL_ENDPOINT}?clientID=${encodeURIComponent(clientID)}`);
     eventSourceRef.current = source;
     source.addEventListener('message', handleReceivedScroll);
 
@@ -115,7 +113,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
 
   const { data, isLoading, error } = useSWR(`/docs/${googleDoc.id}`, async () => {
     return googleDoc
-      ? (await axios.get(apiUrl('/v1/google/docs'), { params: { id: googleDoc.id }, headers: authHeaders() })).data
+      ? (await axios.get(apiUrl('/v1/google/docs'), { params: { id: googleDoc.id }, headers: sessionHeaders() })).data
       : null;
   });
 
