@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { cookies } from 'next/headers';
 import { ZephyrexApp } from 'zephyrex';
-import Head from 'zephyrex/components/appwrapper/src/Head';
 import { SidebarContext } from 'zephyrex/components/appwrapper/src/SidebarContext';
 import { SidebarMain } from 'zephyrex/components/appwrapper/src/SidebarMain';
 import type { ReactNode } from 'react';
@@ -19,7 +18,6 @@ export default async function RootLayout({ children }: { children: ReactNode }):
 
   return (
     <html lang='en' className={htmlThemeClass} suppressHydrationWarning>
-      <Head />
       <body className={cn(theme, appearance)}>
         <ZephyrexApp config={appConfig}>
           <SidebarMain side='left' />
