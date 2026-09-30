@@ -8,6 +8,7 @@ import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
 import { apiUrl, hasSession } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
+import appConfig from '~/zephyrex.config';
 
 function isUnauthorized(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 401;
@@ -29,7 +30,7 @@ export default function Home() {
   const [selectedDocument, setSelectedDocument] = useState<PrompterDocument | null>(null);
 
   const needsLogin = !signedIn || isUnauthorized(error);
-  const authUri = process.env.NEXT_PUBLIC_AUTH_URI ?? '/user';
+  const authUri = appConfig.auth?.authPath ?? '/user';
 
   return (
     <SidebarInset className='h-svh overflow-y-auto'>

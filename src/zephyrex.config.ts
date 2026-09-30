@@ -17,10 +17,17 @@ const teleprompterExtension: ZephyrexClientExtension = {
   navItems: [{ title: 'Teleprompter', url: '/' }],
 };
 
+const DEFAULT_PORT = 6969;
+
 const config: ZephyrexConfig = {
   server: {
-    // A plain prefix: the framework client requests `${baseUrl}/v1/...`, served by src/app/api/v1/*.
-    baseUrl: process.env.NEXT_PUBLIC_API_URI ?? 'http://localhost:6969/api',
+    // Same-origin: the browser calls `/api/v1/...` on this app (src/app/api/v1/*),
+    // so the HttpOnly session cookie never leaves the origin.
+    baseUrl: '/api',
+    // Where this Next server reaches that same in-process API for the middleware's
+    // session check. A fixed server-side address, never derived from the request.
+    // `||`, not `??`: an empty API_UPSTREAM_URL= (as in .env.example) means "use the default".
+    upstreamUrl: process.env.API_UPSTREAM_URL || `http://127.0.0.1:${process.env.PORT || DEFAULT_PORT}/api`,
   },
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Open Teleprompt',
@@ -28,7 +35,11 @@ const config: ZephyrexConfig = {
     defaultTheme: (process.env.NEXT_PUBLIC_THEME_DEFAULT_MODE as 'dark' | 'light') ?? 'dark',
   },
   auth: {
-    privateRoutes: (process.env.PRIVATE_ROUTES ?? '/settings,/team').split(','),
+    authPath: '/user',
+    // Google is the only sign-in: no email/password or magic-link accounts exist.
+    authModes: { basic: false, magical: false },
+    oauthProviders: ['google'],
+    privateRoutes: (process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean),
   },
   extensions: [teleprompterExtension],
 };

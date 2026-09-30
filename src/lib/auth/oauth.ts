@@ -21,6 +21,7 @@ import { constantTimeEqual, encryptSecret, pkceChallenge, randomToken, sha256 } 
 import { issueSession, type IssuedSession } from '~/lib/auth/session';
 import { requireEnv } from '~/lib/env';
 import { prisma } from '~/lib/prisma';
+import appConfig from '~/zephyrex.config';
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 export const OAUTH_GRANT_TYPE = 'oauth_consumer';
@@ -285,10 +286,13 @@ export class OAuthLogin {
   }
 }
 
+const DEFAULT_AUTH_PATH = '/user';
+
+/** Exact-match allowlist; by default the framework's close page, `${APP_URI}${authPath}/close/google`. */
 function configuredRedirectUris(): string[] {
   const configured = process.env.OAUTH_REDIRECT_URIS;
   if (configured) return configured.split(',').map((uri) => uri.trim());
-  return [`${requireEnv('AUTH_URI')}/close/google`];
+  return [`${requireEnv('APP_URI')}${appConfig.auth?.authPath ?? DEFAULT_AUTH_PATH}/close/google`];
 }
 
 export const oauthLogin = new OAuthLogin(

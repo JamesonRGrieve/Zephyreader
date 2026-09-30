@@ -31,10 +31,8 @@
 
 ARG NODE_IMAGE=docker.io/library/node:24-bookworm-slim
 ARG PNPM_VERSION=11.1.1
-# Public origin; the build inlines it and the runtime auth middleware reads it.
+# Public origin: inlined by the build and read at runtime (OAuth redirect base).
 ARG APP_URI=http://localhost:6969
-# Auth UI root; empty means ${APP_URI}/user.
-ARG AUTH_URI=
 
 FROM ${NODE_IMAGE} AS base
 ARG PNPM_VERSION
@@ -71,15 +69,10 @@ FROM deps AS builder
 ARG APP_NAME="Open Teleprompt"
 ARG APP_DESCRIPTION="An open source teleprompting software."
 ARG APP_URI
-ARG AUTH_URI
-# API prefix; empty means ${APP_URI}/api.
-ARG API_URI=
 ARG DEFAULT_THEME_MODE=dark
 ENV APP_NAME=${APP_NAME} \
     APP_DESCRIPTION=${APP_DESCRIPTION} \
     APP_URI=${APP_URI} \
-    AUTH_URI=${AUTH_URI} \
-    API_URI=${API_URI} \
     DEFAULT_THEME_MODE=${DEFAULT_THEME_MODE} \
     NEXT_OUTPUT_STANDALONE=1
 COPY . .
@@ -94,18 +87,15 @@ CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 # ---- runtime: the traced standalone server only, as a non-root user ----
 FROM ${NODE_IMAGE} AS runner
 ARG APP_URI
-ARG AUTH_URI
-# The @zephyrex/auth middleware reads APP_URI, AUTH_URI and PRIVATE_ROUTES from the
-# live environment on every request; default them to the build's values so the
-# image runs as built (override with --env-file / -e).
+# APP_URI defaults to the build's value so the image runs as built (override with
+# --env-file / -e). The middleware's session check reaches the in-process API at
+# http://127.0.0.1:${PORT}/api (API_UPSTREAM_URL overrides).
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=6969 \
     HOSTNAME=0.0.0.0 \
     DATABASE_URL=file:/data/zephyreader.db \
-    APP_URI=${APP_URI} \
-    AUTH_URI=${AUTH_URI:-${APP_URI}/user} \
-    PRIVATE_ROUTES=/settings,/team
+    APP_URI=${APP_URI}
 WORKDIR /srv/app
 # The injected packages live in the app's own node_modules, so the standalone
 # output (traced from the app root) already carries them.

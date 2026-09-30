@@ -24,6 +24,8 @@ describe('POST /api/v1/auth/oauth/authorize', () => {
     const body = await res.json();
     expect(body.authorize_url).toMatch(/^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/);
     expect(new URL(body.authorize_url).searchParams.get('state')).toBe(body.state);
+    // Default redirect: the framework's close page under the configured authPath.
+    expect(new URL(body.authorize_url).searchParams.get('redirect_uri')).toBe('http://localhost/user/close/google');
 
     const cookie = res.cookies.get(OAUTH_BINDING_COOKIE);
     expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', path: '/api/v1/auth/oauth' });
