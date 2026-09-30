@@ -1,3 +1,10 @@
+# Playwright 1.63's typed responses import zod; declare it as playwright-core's
+# peer so pnpm resolves it (otherwise e2e response types silently become any).
+packageExtensions:
+  playwright-core:
+    peerDependencies:
+      zod: '*'
+
 allowBuilds:
   '@parcel/watcher': true
   '@prisma/client': true

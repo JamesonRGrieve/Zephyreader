@@ -41,6 +41,17 @@ const config: ZephyrexConfig = {
     oauthProviders: ['google'],
     privateRoutes: (process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean),
   },
+  // The sidebar lists only what the app declares: the framework pages it mounts.
+  navItems: [
+    {
+      title: 'Documentation',
+      url: '/docs/api-reference',
+      children: [
+        { title: 'API Reference', url: '/docs/api-reference' },
+        { title: 'Privacy Policy', url: '/docs/privacy' },
+      ],
+    },
+  ],
   extensions: [teleprompterExtension],
 };
 
