@@ -25,7 +25,7 @@ allowBuilds:
 # injected (hard-linked copies, peers resolved from this app) via
 # package.json dependenciesMeta, so there is one React/Next/zod tree.
 overrides:
-  zephyrex: file:../client-framework
+  zephyrex: file:../client-framework/packages/zephyrex
   '@zephyrex/auth': file:../auth
   '@jgrieve/forms': file:../dynamic-form
   zod2gql: file:../zod2gql

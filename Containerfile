@@ -43,18 +43,23 @@ RUN npm install --global --no-fund --no-audit "pnpm@${PNPM_VERSION}"
 WORKDIR /src
 
 # ---- sibling packages: build each dist/ where the `file:../<name>` overrides expect ----
+# Exclusions are recursive (**/): client-framework is a pnpm workspace whose library
+# lives in packages/zephyrex, with its own node_modules and dist/ (and dist.next/
+# while compiling) below the root.
 FROM base AS siblings
-COPY --from=zod2gql --exclude=node_modules --exclude=dist --exclude=.git . /src/zod2gql/
+COPY --from=zod2gql --exclude=**/node_modules --exclude=**/dist --exclude=**/dist.next --exclude=.git \
+     . /src/zod2gql/
 RUN cd /src/zod2gql && pnpm install --frozen-lockfile && pnpm run compile
-COPY --from=dynamic-form --exclude=node_modules --exclude=dist --exclude=.git \
-     --exclude=storybook-static . /src/dynamic-form/
+COPY --from=dynamic-form --exclude=**/node_modules --exclude=**/dist --exclude=**/dist.next --exclude=.git \
+     --exclude=**/storybook-static . /src/dynamic-form/
 RUN cd /src/dynamic-form && pnpm install --frozen-lockfile && pnpm run compile
-COPY --from=auth --exclude=node_modules --exclude=dist --exclude=.git \
-     --exclude=storybook-static . /src/auth/
+COPY --from=auth --exclude=**/node_modules --exclude=**/dist --exclude=**/dist.next --exclude=.git \
+     --exclude=**/storybook-static . /src/auth/
 RUN cd /src/auth && pnpm install --frozen-lockfile && pnpm run compile
-COPY --from=client-framework --exclude=node_modules --exclude=dist --exclude=.next --exclude=.git \
-     --exclude=storybook-static --exclude=test-results --exclude=playwright-report \
-     . /src/client-framework/
+COPY --from=client-framework --exclude=**/node_modules --exclude=**/dist --exclude=**/dist.next \
+     --exclude=**/.next --exclude=.git --exclude=**/storybook-static --exclude=**/test-results \
+     --exclude=**/playwright-report . /src/client-framework/
+# The root `compile` delegates to the zephyrex workspace package (packages/zephyrex/dist).
 RUN cd /src/client-framework && pnpm install --frozen-lockfile && pnpm run compile
 
 # ---- app dependencies (cached until the manifest or lockfile changes) ----
