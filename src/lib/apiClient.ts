@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { getCookie } from 'cookies-next/client';
+import { useSyncExternalStore } from 'react';
 
 /**
  * Same-origin API prefix. The browser session rides in the HttpOnly
@@ -18,6 +19,17 @@ export function apiUrl(path: `/v1/${string}`): string {
 /** Whether this browser holds a session (the HttpOnly session cookie itself is unreadable). */
 export function hasSession(): boolean {
   return Boolean(getCookie(CSRF_COOKIE));
+}
+
+const noSubscription = (): (() => void) => () => {};
+
+/**
+ * `hasSession()` for rendering. The server cannot read the browser's cookies, so
+ * the server render (and the hydrating first client render) says "signed out";
+ * the real answer follows right after hydration instead of mismatching it.
+ */
+export function useHasSession(): boolean {
+  return useSyncExternalStore(noSubscription, hasSession, () => false);
 }
 
 /** `X-CSRF-Token` echoing `zx_csrf`: required on cookie-authenticated writes, harmless on reads. */

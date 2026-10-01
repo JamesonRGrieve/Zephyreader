@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { SidebarInset } from 'zephyrex/ui/sidebar';
 import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
-import { apiUrl, hasSession } from '~/lib/apiClient';
+import { apiUrl, useHasSession } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 import appConfig from '~/zephyrex.config';
 
@@ -15,7 +15,7 @@ function isUnauthorized(error: unknown): boolean {
 }
 
 export default function Home() {
-  const signedIn = hasSession();
+  const signedIn = useHasSession();
   const {
     data: documents,
     error,
