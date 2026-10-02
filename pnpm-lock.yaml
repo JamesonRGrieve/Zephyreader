@@ -8700,12 +8700,16 @@ packages:
   zephyrex@file:../client-framework/packages/zephyrex:
     resolution: {directory: ../client-framework/packages/zephyrex, type: directory}
     peerDependencies:
+      msw: ^3.0.1
       next: ^16.2.6
       react: ^19.2.8
       react-dom: ^19.2.8
       tailwindcss: ^4.3.3
       tailwindcss-animate: ^1.0.7
       zod: ^4.4.3
+    peerDependenciesMeta:
+      msw:
+        optional: true
 
   zeptomatch@2.1.0:
     resolution: {integrity: sha512-KiGErG2J0G82LSpniV0CtIzjlJ10E04j02VOudJsPyPwNZgGnRKQy7I1R7GMyg/QswnE4l7ohSGrQbQbjXPPDA==}
