@@ -36,8 +36,9 @@ const config: ZephyrexConfig = {
   },
   auth: {
     authPath: '/user',
-    // Google is the only sign-in: no email/password or magic-link accounts exist.
-    authModes: { basic: false, magical: false },
+    // Google is the only sign-in: no password accounts, and no magic-link extension
+    // (@zephyrex/auth-magic-link) is registered, so magic links stay off too.
+    authModes: { basic: false },
     oauthProviders: ['google'],
     privateRoutes: (process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean),
   },

@@ -7351,9 +7351,6 @@ packages:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
 
-  qrcode-generator@2.0.4:
-    resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
-
   qs@6.16.0:
     resolution: {integrity: sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==}
     engines: {node: '>=0.6'}
@@ -7448,11 +7445,6 @@ packages:
     peerDependencies:
       '@types/react': '>=18'
       react: '>=18'
-
-  react-qr-code@2.2.0:
-    resolution: {integrity: sha512-e5nS0UUN22K3Nf8KBRUzemfdJ6OmnN5w+kbnj1lvJaol9RyVRFeGl05bCkxSN2ZegbLxjjYjX1+mmAoX9+fAhw==}
-    peerDependencies:
-      react: '*'
 
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
@@ -12460,7 +12452,6 @@ snapshots:
       react-google-recaptcha: 3.1.0(react@19.3.0)
       react-hook-form: 7.89.0(@types/react@19.3.0)(react@19.3.0)
       react-icons: 5.7.0(react@19.3.0)
-      react-qr-code: 2.2.0(react@19.3.0)
       swr: 2.5.1(react@19.3.0)
       tailwind-merge: 3.7.0
       zod: 4.6.5
@@ -16809,8 +16800,6 @@ snapshots:
     dependencies:
       hookified: 2.2.0
 
-  qrcode-generator@2.0.4: {}
-
   qs@6.16.0:
     dependencies:
       es-define-property: 1.0.1
@@ -16922,12 +16911,6 @@ snapshots:
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
-
-  react-qr-code@2.2.0(react@19.3.0):
-    dependencies:
-      prop-types: 15.8.1
-      qrcode-generator: 2.0.4
-      react: 19.3.0
 
   react-refresh@0.14.2: {}
 
