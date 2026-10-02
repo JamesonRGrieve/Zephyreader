@@ -9,7 +9,8 @@ import { Button } from 'zephyrex/ui/button';
 import MarkdownBlock from 'zephyrex/components/markdown/MarkdownBlock';
 import { Card, CardContent, CardHeader, CardTitle } from 'zephyrex/ui/card';
 import { Slider } from 'zephyrex/ui/slider';
-import { apiUrl, sessionHeaders } from '~/lib/apiClient';
+import { csrfHeaders } from '@zephyrex/auth/lib/session';
+import { apiUrl } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 
 export type TeleprompterProps = {
@@ -25,7 +26,7 @@ const SCROLL_ENDPOINT = apiUrl('/v1/scroll');
 function postScroll(body: Record<string, unknown>): void {
   void fetch(SCROLL_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders('POST') },
     body: JSON.stringify(body),
   });
 }
@@ -112,9 +113,7 @@ export default function Teleprompter({ googleDoc, setSelectedDocument }: Telepro
   }, [handleInputScroll, handleReceivedScroll, clientID]);
 
   const { data, isLoading, error } = useSWR(`/docs/${googleDoc.id}`, async () => {
-    return googleDoc
-      ? (await axios.get(apiUrl('/v1/google/docs'), { params: { id: googleDoc.id }, headers: sessionHeaders() })).data
-      : null;
+    return googleDoc ? (await axios.get(apiUrl('/v1/google/docs'), { params: { id: googleDoc.id } })).data : null;
   });
 
   return (

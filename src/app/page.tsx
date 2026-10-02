@@ -3,10 +3,11 @@
 import axios from 'axios';
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useHasSession } from 'zephyrex';
 import { SidebarInset } from 'zephyrex/ui/sidebar';
 import DocumentList from './DocumentList';
 import Teleprompter from './Teleprompter';
-import { apiUrl, useHasSession } from '~/lib/apiClient';
+import { apiUrl } from '~/lib/apiClient';
 import type { PrompterDocument } from '~/lib/documents';
 import appConfig from '~/zephyrex.config';
 

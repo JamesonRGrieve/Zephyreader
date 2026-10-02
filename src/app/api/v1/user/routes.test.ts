@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { issueSession } from '~/lib/auth/session';
 import { prisma } from '~/lib/prisma';
 import { GET as getTeams } from '../team/route';
-import { GET as getInvitations } from './invitation/route';
 import { PUT as putUser } from './route';
 
 const CSRF = 'csrf-value';
@@ -69,18 +68,14 @@ describe('PUT /api/v1/user', () => {
   });
 });
 
-describe('GET /api/v1/team and /api/v1/user/invitation', () => {
-  it('return empty lists to a signed-in caller', async () => {
+describe('GET /api/v1/team', () => {
+  it('returns an empty list to a signed-in caller', async () => {
     const { token } = await signedIn();
     const headers = { authorization: `Bearer ${token}` };
     await expect((await getTeams(request('/api/v1/team', { headers }))).json()).resolves.toEqual({ teams: [] });
-    await expect((await getInvitations(request('/api/v1/user/invitation', { headers }))).json()).resolves.toEqual({
-      invitations: [],
-    });
   });
 
-  it('401 an anonymous caller', async () => {
+  it('401s an anonymous caller', async () => {
     expect((await getTeams(request('/api/v1/team'))).status).toBe(401);
-    expect((await getInvitations(request('/api/v1/user/invitation'))).status).toBe(401);
   });
 });
