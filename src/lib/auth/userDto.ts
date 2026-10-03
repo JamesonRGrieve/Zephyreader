@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { User } from '@prisma/client';
+import { entityTag } from '~/lib/conditionalRequest';
+
+export type UserDto = ReturnType<typeof toUserDto>;
 
 /** server-framework's user DTO (GET /v1/user): snake_case, never any credential fields. */
 export function toUserDto(user: User) {
@@ -20,4 +23,9 @@ export function toUserDto(user: User) {
     timezone: user.timezone,
     language: user.language,
   };
+}
+
+/** The user row's entity tag: its serialised `updated_at`, exactly as the DTO carries it. */
+export function userEntityTag(dto: UserDto): string {
+  return entityTag(dto.updated_at);
 }

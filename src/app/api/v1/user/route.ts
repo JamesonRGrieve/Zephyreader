@@ -3,25 +3,49 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { apiErrorResponse } from '~/lib/apiErrors';
 import { parseProfileUpdate } from '~/lib/auth/profileUpdate';
 import { authenticate } from '~/lib/auth/session';
-import { toUserDto } from '~/lib/auth/userDto';
+import { toUserDto, userEntityTag, type UserDto } from '~/lib/auth/userDto';
+import { updateUserUnlessModified } from '~/lib/auth/userUpdate';
+import { evaluateIfMatch } from '~/lib/conditionalRequest';
 import { prisma } from '~/lib/prisma';
 import { readJsonObject } from '~/lib/requestBody';
 
+function userResponse(user: UserDto): NextResponse {
+  return NextResponse.json({ user }, { headers: { ETag: userEntityTag(user) } });
+}
+
+/** 412 with the row as it now stands, which the client's conflict view diffs against. */
+function preconditionFailed(current: UserDto): NextResponse {
+  return NextResponse.json(
+    { detail: 'Precondition Failed — entity has been modified', current },
+    { status: 412, headers: { ETag: userEntityTag(current) } },
+  );
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    return NextResponse.json({ user: toUserDto(await authenticate(request)) });
+    return userResponse(toUserDto(await authenticate(request)));
   } catch (error) {
     return apiErrorResponse(error);
   }
 }
 
-/** PUT /v1/user (server-framework parity): update the caller's own profile; `{ user }` in and out. */
+/**
+ * PUT /v1/user (server-framework parity): update the caller's own profile; `{ user }` in and out.
+ * An `If-Match` naming a stale `updated_at` is refused with 412; a missing one is still accepted.
+ */
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await authenticate(request);
     const changes = parseProfileUpdate(await readJsonObject(request));
-    const updated = await prisma.user.update({ where: { id: user.id }, data: changes });
-    return NextResponse.json({ user: toUserDto(updated) });
+    const current = toUserDto(user);
+    if (evaluateIfMatch(request.headers.get('if-match'), current.updated_at) === 'mismatch') {
+      return preconditionFailed(current);
+    }
+    const updated = await updateUserUnlessModified(user, changes);
+    if (updated === null) {
+      return preconditionFailed(toUserDto(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })));
+    }
+    return userResponse(toUserDto(updated));
   } catch (error) {
     return apiErrorResponse(error);
   }

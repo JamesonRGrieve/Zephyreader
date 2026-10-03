@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { issueSession } from '~/lib/auth/session';
 import { prisma } from '~/lib/prisma';
 import { GET as getTeams } from '../team/route';
-import { PUT as putUser } from './route';
+import { GET as getUser, PUT as putUser } from './route';
 
 const CSRF = 'csrf-value';
 
@@ -65,6 +65,80 @@ describe('PUT /api/v1/user', () => {
 
   it('401s without credentials', async () => {
     expect((await putUser(request('/api/v1/user', { method: 'PUT', body: { user: {} } }))).status).toBe(401);
+  });
+});
+
+describe('PUT /api/v1/user preconditions', () => {
+  const put = (token: string, ifMatch: string | undefined, firstName: string) =>
+    putUser(
+      request('/api/v1/user', {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${token}`, ...(ifMatch === undefined ? {} : { 'if-match': ifMatch }) },
+        body: { user: { first_name: firstName } },
+      }),
+    );
+
+  async function currentTag(token: string): Promise<{ tag: string; updatedAt: string }> {
+    const res = await getUser(request('/api/v1/user', { headers: { authorization: `Bearer ${token}` } }));
+    const body = (await res.json()) as { user: { updated_at: string } };
+    return { tag: res.headers.get('etag') ?? '', updatedAt: body.user.updated_at };
+  }
+
+  it('GET sends the quoted updated_at as a strong ETag', async () => {
+    const { token } = await signedIn();
+    const { tag, updatedAt } = await currentTag(token);
+    expect(tag).toBe(`"${updatedAt}"`);
+  });
+
+  it('saves on a current If-Match and returns the new tag', async () => {
+    const { token } = await signedIn();
+    const before = await currentTag(token);
+    const res = await put(token, before.tag, 'Augusta');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { user: { first_name: string; updated_at: string } };
+    expect(body.user.first_name).toBe('Augusta');
+    expect(body.user.updated_at).not.toBe(before.updatedAt);
+    expect(res.headers.get('etag')).toBe(`"${body.user.updated_at}"`);
+  });
+
+  it('412s a stale If-Match with the current row and leaves it untouched', async () => {
+    const { token } = await signedIn();
+    const stale = (await currentTag(token)).tag;
+    expect((await put(token, stale, 'Augusta')).status).toBe(200);
+    const res = await put(token, stale, 'Countess');
+    expect(res.status).toBe(412);
+    await expect(res.json()).resolves.toMatchObject({
+      detail: expect.any(String),
+      current: { first_name: 'Augusta' },
+    });
+    const saved = await prisma.user.findFirstOrThrow();
+    expect(saved.firstName).toBe('Augusta');
+  });
+
+  it('gives two back-to-back saves distinct tags', async () => {
+    const { token } = await signedIn();
+    const first = await put(token, (await currentTag(token)).tag, 'One');
+    const firstTag = first.headers.get('etag') ?? '';
+    const second = await put(token, firstTag, 'Two');
+    expect(second.status).toBe(200);
+    expect(second.headers.get('etag')).not.toBe(firstTag);
+  });
+
+  it('lets exactly one of two racing saves on the same tag win', async () => {
+    const { token } = await signedIn();
+    const tag = (await currentTag(token)).tag;
+    const statuses = (await Promise.all([put(token, tag, 'One'), put(token, tag, 'Two')])).map((res) => res.status);
+    expect(statuses.toSorted()).toEqual([200, 412]);
+  });
+
+  it('still accepts a save without If-Match', async () => {
+    const { token } = await signedIn();
+    expect((await put(token, undefined, 'Augusta')).status).toBe(200);
+  });
+
+  it('accepts If-Match: *', async () => {
+    const { token } = await signedIn();
+    expect((await put(token, '*', 'Augusta')).status).toBe(200);
   });
 });
 
