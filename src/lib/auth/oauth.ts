@@ -13,7 +13,7 @@
  *   linked by email, only when the IdP asserts `email_verified`.
  * - IdP access/refresh tokens are encrypted at rest.
  *
- * Mirrors zephyrex-auth's oauth_consumer contract (/v1/auth/oauth/*).
+ * Mirrors server-framework's oauth_consumer contract (/v1/auth/oauth/*).
  */
 import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { ApiError } from '~/lib/apiErrors';
