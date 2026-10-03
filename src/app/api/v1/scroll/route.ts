@@ -33,7 +33,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     start(controller) {
       const sessions = (clients[user.id] ??= []);
       if (sessions.some((client) => client.clientID === newClientID)) {
-        console.error(`Client ${newClientID} already exists for user ${user.email}.`);
+        console.error(`Client ${newClientID} already exists for user ${user.id}.`);
         return;
       }
 
