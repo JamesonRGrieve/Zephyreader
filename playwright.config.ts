@@ -9,7 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // One worker per core (Playwright's default is half): the server is shared, so more workers end the run sooner.
+  workers: process.env.CI ? 1 : '100%',
   reporter: [['list']],
   timeout: 60_000,
   use: {

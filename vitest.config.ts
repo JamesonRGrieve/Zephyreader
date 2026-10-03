@@ -5,10 +5,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    setupFiles: ['src/__tests__/setup.ts'],
+    // workerDatabase first: each worker gets its own copy of the migrated database, so files run in parallel.
+    setupFiles: ['src/__tests__/workerDatabase.ts', 'src/__tests__/setup.ts'],
     globalSetup: ['src/__tests__/globalSetup.ts'],
-    // Auth tests share one real SQLite database; run files serially so they don't interleave writes.
-    fileParallelism: false,
+    // Threads over forks: lighter per-worker memory and startup; one worker per core.
+    pool: 'threads',
+    maxWorkers: '100%',
     globals: true,
     exclude: ['**/node_modules/**', '.next/**', 'e2e/**', 'tests/**', '**/*.stories.{ts,tsx}'],
   },
