@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { NextResponse, type NextRequest } from 'next/server';
-import { apiErrorResponse } from '~/lib/apiErrors';
+import { ApiError, apiErrorResponse } from '~/lib/apiErrors';
 import { parseProfileUpdate } from '~/lib/auth/profileUpdate';
 import { authenticate } from '~/lib/auth/session';
 import { toUserDto, userEntityTag, type UserDto } from '~/lib/auth/userDto';
@@ -31,16 +31,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 /**
  * PUT /v1/user (server-framework parity): update the caller's own profile; `{ user }` in and out.
- * An `If-Match` naming a stale `updated_at` is refused with 412; a missing one is still accepted.
+ * The write must name the version it was made from: no `If-Match` is refused with 428, and one
+ * naming a stale `updated_at` with 412.
  */
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await authenticate(request);
     const changes = parseProfileUpdate(await readJsonObject(request));
     const current = toUserDto(user);
-    if (evaluateIfMatch(request.headers.get('if-match'), current.updated_at) === 'mismatch') {
-      return preconditionFailed(current);
-    }
+    const precondition = evaluateIfMatch(request.headers.get('if-match'), current.updated_at);
+    if (precondition === 'absent') throw new ApiError(428, 'If-Match required');
+    if (precondition === 'mismatch') return preconditionFailed(current);
     const updated = await updateUserUnlessModified(user, changes);
     if (updated === null) {
       return preconditionFailed(toUserDto(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })));

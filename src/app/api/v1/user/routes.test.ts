@@ -3,6 +3,7 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { issueSession } from '~/lib/auth/session';
+import { toUserDto, userEntityTag } from '~/lib/auth/userDto';
 import { prisma } from '~/lib/prisma';
 import { GET as getTeams } from '../team/route';
 import { GET as getUser, PUT as putUser } from './route';
@@ -15,7 +16,7 @@ beforeEach(async () => {
 
 async function signedIn() {
   const user = await prisma.user.create({ data: { email: 'ada@example.com', firstName: 'Ada' } });
-  return { user, token: (await issueSession(user, 'oauth_consumer')).token };
+  return { user, token: (await issueSession(user, 'oauth_consumer')).token, ifMatch: userEntityTag(toUserDto(user)) };
 }
 
 const request = (url: string, init: { method?: string; headers?: Record<string, string>; body?: unknown } = {}) =>
@@ -27,11 +28,11 @@ const request = (url: string, init: { method?: string; headers?: Record<string, 
 
 describe('PUT /api/v1/user', () => {
   it('updates the caller and returns the enveloped user DTO', async () => {
-    const { user, token } = await signedIn();
+    const { user, token, ifMatch } = await signedIn();
     const res = await putUser(
       request('/api/v1/user', {
         method: 'PUT',
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'if-match': ifMatch },
         body: { user: { last_name: 'Lovelace', timezone: 'Europe/London' } },
       }),
     );
@@ -42,11 +43,14 @@ describe('PUT /api/v1/user', () => {
   });
 
   it('requires X-CSRF-Token when authenticated by the session cookie', async () => {
-    const { token } = await signedIn();
+    const { token, ifMatch } = await signedIn();
     const cookie = `zx_session=${token}; zx_csrf=${CSRF}`;
     const body = { user: { first_name: 'Augusta' } };
-    expect((await putUser(request('/api/v1/user', { method: 'PUT', headers: { cookie }, body }))).status).toBe(403);
-    const ok = await putUser(request('/api/v1/user', { method: 'PUT', headers: { cookie, 'x-csrf-token': CSRF }, body }));
+    const headers = { cookie, 'if-match': ifMatch };
+    expect((await putUser(request('/api/v1/user', { method: 'PUT', headers, body }))).status).toBe(403);
+    const ok = await putUser(
+      request('/api/v1/user', { method: 'PUT', headers: { ...headers, 'x-csrf-token': CSRF }, body }),
+    );
     expect(ok.status).toBe(200);
     await expect(ok.json()).resolves.toMatchObject({ user: { first_name: 'Augusta' } });
   });
@@ -131,9 +135,12 @@ describe('PUT /api/v1/user preconditions', () => {
     expect(statuses.toSorted()).toEqual([200, 412]);
   });
 
-  it('still accepts a save without If-Match', async () => {
+  it('428s a save without If-Match and leaves the row untouched', async () => {
     const { token } = await signedIn();
-    expect((await put(token, undefined, 'Augusta')).status).toBe(200);
+    const res = await put(token, undefined, 'Augusta');
+    expect(res.status).toBe(428);
+    await expect(res.json()).resolves.toEqual({ detail: 'If-Match required' });
+    expect((await prisma.user.findFirstOrThrow()).firstName).toBe('Ada');
   });
 
   it('accepts If-Match: *', async () => {
