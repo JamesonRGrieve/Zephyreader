@@ -49,7 +49,7 @@
     "swr": "^2.5.1",
     "tailwind-merge": "^3.7.0",
     "uuid": "^14.0.2",
-    "zephyrex": "^1.0.0-alpha.1",
+    "zephyrex": "^0.0.1-alpha.1",
     "zod": "^4.6.5",
     "zod2gql": "^0.1.0-alpha.1"
   },
