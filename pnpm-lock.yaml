@@ -69,7 +69,7 @@ importers:
         version: 14.0.2
       zephyrex:
         specifier: file:../client-framework/packages/zephyrex
-        version: file:../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(ajv@8.20.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5)
+        version: file:../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(ajv@8.20.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -3819,7 +3819,7 @@ packages:
       next: ^16.0.0
       react: ^19.0.0
       react-dom: ^19.0.0
-      zod: ^4.0.0
+      zod: ^4.3.0
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -8700,6 +8700,7 @@ packages:
   zephyrex@file:../client-framework/packages/zephyrex:
     resolution: {directory: ../client-framework/packages/zephyrex, type: directory}
     peerDependencies:
+      '@testing-library/react': ^16.3.3
       msw: ^3.0.1
       next: ^16.2.6
       react: ^19.2.8
@@ -8708,6 +8709,8 @@ packages:
       tailwindcss-animate: ^1.0.7
       zod: ^4.4.3
     peerDependenciesMeta:
+      '@testing-library/react':
+        optional: true
       msw:
         optional: true
 
@@ -18313,7 +18316,7 @@ snapshots:
 
   yocto-queue@1.2.2: {}
 
-  zephyrex@file:../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(ajv@8.20.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5):
+  zephyrex@file:../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(ajv@8.20.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5):
     dependencies:
       '@jgrieve/forms': file:../dynamic-form(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-alert-dialog': 1.1.23(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -18361,6 +18364,8 @@ snapshots:
       tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
       vaul: 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       zod: 4.6.5
+    optionalDependencies:
+      '@testing-library/react': 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     transitivePeerDependencies:
       - '@sinclair/typebox'
       - '@standard-schema/spec'
