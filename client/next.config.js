@@ -16,7 +16,7 @@ const IS_LITE = VARIANT === 'lite';
 
 // The framework server the SaaS build proxies to (server-side only, never sent to
 // the browser). Its routes live at /v1/*, so /api/v1/x maps to ${SERVER_URI}/v1/x.
-const SERVER_URI = process.env.ZEPHYREADER_SERVER_URI || 'http://127.0.0.1:2001';
+const SERVER_URI = process.env.ZEPHYREADER_SERVER_URI || 'http://127.0.0.1:6970';
 
 const DEFAULT_PAGE_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
 

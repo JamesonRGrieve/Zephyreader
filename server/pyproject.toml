@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zephyreader-server"
+version = "0.0.1"
+description = "Zephyreader SaaS backend: a consumer of the Zephyrex server framework"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.11"
+dependencies = [
+    "zephyrex[ai,cloud,entitlements,live-sync,oauth-consumer,payment]",
+    # zephyrex passes FastAPI(openapi_version=...), which FastAPI 0.162 rejects;
+    # hold the version the framework's own requirements.lock vets.
+    "fastapi~=0.142.2",
+]
+
+# The framework's unreleased live_sync, delegated cloud providers, timed
+# transcription and entitlements live in the sibling checkout at the workspace
+# root (Source/server-framework); back to the PyPI release once one ships them.
+[tool.uv.sources]
+zephyrex = { path = "../../server-framework", editable = true }
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-xdist",
+    "ruff",
+]
+
+[tool.setuptools]
+py-modules = ["zephyreader_app"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# The framework discovers extension modules by its EXT_/BLL_ naming convention.
+"extensions/**" = ["N999"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+# The framework's plugin teaches mypy the Reference classes ModelMeta builds at runtime.
+plugins = ["zephyrex.mypy_plugin", "pydantic.mypy"]
+mypy_path = "extensions"
+
+[[tool.mypy.overrides]]
+# zephyrex ships no py.typed marker; analyse it anyway so its types reach this code.
+module = ["zephyrex", "zephyrex.*"]
+follow_untyped_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["extensions"]
+python_files = ["*_test.py"]
+addopts = "-n auto --dist loadscope"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[[tool.mypy.overrides]]
+# TODO ratchet to zero and re-enable strict: the framework's ModelMeta.__init_subclass__
+# and its test factories (create_user) are untyped (Server Framework Deck card 253,
+# "framework typing"); everything else here stays strict.
+module = ["teleprompter.BLL_Teleprompter", "teleprompter.EP_Teleprompter_test"]
+disallow_untyped_calls = false

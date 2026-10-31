@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name = "teleprompter"
+version = "0.0.1"
+description = "Teleprompter scripts, folders, prompter settings, recordings with captions, AI writing and voice"
+entry_module = "EXT_Teleprompter"
+minimum_framework_version = "0.0.1"
+
+[[extension_dependencies]]
+name = "entitlements"
+optional = false
+
+[[extension_dependencies]]
+name = "cloud"
+optional = false
+
+[[extension_dependencies]]
+name = "ai"
+optional = false
