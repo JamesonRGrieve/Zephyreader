@@ -1,0 +1,31 @@
+# Playwright 1.63's typed responses import zod; declare it as playwright-core's
+# peer so pnpm resolves it (otherwise e2e response types silently become any).
+packageExtensions:
+  playwright-core:
+    peerDependencies:
+      zod: '*'
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@swc/core': true
+  better-sqlite3: true
+  # postinstall only prints a funding banner
+  core-js: false
+  core-js-pure: true
+  esbuild: true
+  prisma: true
+  # ships prebuilt @img/* binaries; the install script is a build-from-source fallback
+  sharp: false
+  unrs-resolver: true
+
+# The Zephyrex packages are not on a registry yet (publishing needs operator
+# approval), so resolve them from the sibling checkouts' compiled dist/. They are
+# injected (hard-linked copies, peers resolved from this app) via
+# package.json dependenciesMeta, so there is one React/Next/zod tree.
+overrides:
+  zephyrex: file:../../client-framework/packages/zephyrex
+  '@zephyrex/auth': file:../../auth
+  '@jgrieve/forms': file:../../dynamic-form
+  zod2gql: file:../../zod2gql

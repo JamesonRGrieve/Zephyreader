@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+public/workbox-*.js
+public/sw.js
+.next
+storybook-static
