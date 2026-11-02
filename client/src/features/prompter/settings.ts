@@ -10,11 +10,11 @@ import { z } from 'zod';
 export const FONT_SIZE = { min: 24, max: 200, step: 2, default: 56 } as const;
 export const LINE_HEIGHT = { min: 1, max: 2.5, step: 0.05, default: 1.5 } as const;
 export const MARGIN_PERCENT = { min: 0, max: 30, step: 1, default: 10 } as const;
-export const SPEED = { min: 10, max: 400, step: 5, default: 60 } as const;
+/** The prompter's pace in words a minute: how fast it scrolls, and what time estimates assume. */
+export const SPEED = { min: 60, max: 400, step: 5, default: 150 } as const;
 export const COUNTDOWN_SECONDS = { min: 0, max: 10, step: 1, default: 3 } as const;
 export const EYE_LINE = { min: 0.1, max: 0.6, step: 0.01, default: 0.33 } as const;
 export const TARGET_DURATION_SECONDS = { min: 10, max: 4 * 60 * 60, default: 5 * 60 } as const;
-export const READING_WPM = { min: 60, max: 260, default: 150 } as const;
 
 export const FONT_FAMILIES = ['sans', 'serif', 'mono', 'rounded'] as const;
 export const ALIGNMENTS = ['left', 'center'] as const;
@@ -67,7 +67,6 @@ export const prompterSettingsSchema = z.object({
   scrollMode: z.enum(SCROLL_MODES).catch('constant'),
   speed: bounded(SPEED),
   targetDurationSeconds: bounded(TARGET_DURATION_SECONDS),
-  readingWpm: bounded(READING_WPM),
   voiceEngine: z.enum(VOICE_ENGINES).catch('local'),
   language: z.string().min(2).max(16).catch('en'),
 });

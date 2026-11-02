@@ -6,6 +6,25 @@ const SECONDS_PER_HOUR = 3600;
 /** A timed scroll never crawls slower than this, so a nearly-finished script still moves. */
 export const MIN_TIMED_SPEED = 1;
 
+/**
+ * How far apart the spoken words sit in this layout, on average, from where each one is
+ * (`wordOffsets`, top to bottom). Zero with fewer than two words.
+ */
+export function pixelsPerWord(wordOffsets: readonly number[]): number {
+  const first = wordOffsets.at(0);
+  const last = wordOffsets.at(-1);
+  if (first === undefined || last === undefined || wordOffsets.length < 2) return 0;
+  return (last - first) / (wordOffsets.length - 1);
+}
+
+/**
+ * Pixels a second that read `wordsPerMinute` words a minute in a layout `wordSpacing` pixels a
+ * word apart: so a speed reads the same on a wide desktop and a narrow phone.
+ */
+export function scrollPace(wordsPerMinute: number, wordSpacing: number): number {
+  return (wordsPerMinute / SECONDS_PER_MINUTE) * wordSpacing;
+}
+
 /** The speed that covers `remaining` pixels in `secondsLeft` seconds (timed mode). */
 export function timedSpeed(remaining: number, secondsLeft: number): number {
   if (remaining <= 0) return 0;

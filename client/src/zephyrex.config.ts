@@ -55,6 +55,9 @@ const config: ZephyrexConfig = {
     authPath: '/user',
     // Signing in lands on the script library, not the account page.
     home: LIBRARY_PATH,
+    // What the account page says deleting an account takes with it (the server erases it first).
+    deletionNote:
+      'Your scripts, folders, prompter settings and recordings are deleted with your account, and you are signed out. This cannot be undone.',
     // Google is the only sign-in: no password accounts, and no magic-link extension
     // (@zephyrex/auth-magic-link) is registered, so magic links stay off too.
     authModes: { basic: false },
@@ -66,11 +69,8 @@ const config: ZephyrexConfig = {
   navItems: [
     {
       title: 'Documentation',
-      url: '/docs/api-reference',
-      children: [
-        { title: 'API Reference', url: '/docs/api-reference' },
-        { title: 'Privacy Policy', url: '/docs/privacy' },
-      ],
+      url: '/docs/privacy',
+      children: [{ title: 'Privacy Policy', url: '/docs/privacy' }],
     },
   ],
   extensions: [teleprompterExtension],

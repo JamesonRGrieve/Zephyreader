@@ -60,6 +60,20 @@ const PIP_SIZE = { width: 520, height: 300 };
 
 type Panel = 'display' | 'scrolling' | 'record' | 'devices' | null;
 
+const SETTINGS_NOTE = 'Changes apply at once. Save them as your default from the toolbar.';
+
+/** Each side panel's heading, and the line beneath it that says what it is for. */
+const PANELS: Record<NonNullable<Panel>, { title: string; description: string }> = {
+  display: { title: 'Display', description: SETTINGS_NOTE },
+  scrolling: { title: 'Scrolling', description: SETTINGS_NOTE },
+  record: { title: 'Record a take', description: 'The script stays on your screen; it is never in the video.' },
+  devices: {
+    title: 'Devices and remote',
+    description:
+      'Open this script on another screen to mirror it, or open the remote on your phone to drive it. One device leads; the others follow.',
+  },
+};
+
 export interface PrompterViewProps {
   script: Script;
   settings: PrompterSettings;
@@ -132,6 +146,9 @@ export default function PrompterView(props: PrompterViewProps) {
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   const pipSurfaceRef = useRef<HTMLDivElement>(null);
   const channel = useRef<LiveChannel | null>(null);
+  // Whether the channel names this display the leader, as of its last presence message (not
+  // until the first one arrives): a leader never follows another display's position.
+  const leadsChannel = useRef(false);
   const aligner = useRef<VoiceAligner | null>(null);
   // The scroll's latest state, for listeners registered once.
   const scrollRef = useRef(scroll);
@@ -272,7 +289,9 @@ export default function PrompterView(props: PrompterViewProps) {
     live.open({
       onDevices: (found) => {
         setDevices(found);
-        setIsMain(found.find((device) => device.client_id === props.deviceId)?.main ?? true);
+        const leads = found.find((device) => device.client_id === props.deviceId)?.main ?? true;
+        leadsChannel.current = leads;
+        setIsMain(leads);
         if (displayShouldLead(found)) void live.claim();
       },
       onConnection: setConnected,
@@ -280,7 +299,7 @@ export default function PrompterView(props: PrompterViewProps) {
         const data = typeof message.data === 'object' && message.data !== null ? message.data : {};
         if (message.type === 'scroll') {
           const ratio = Reflect.get(data, 'ratio');
-          if (typeof ratio === 'number') scrollRef.current.followTo(ratio);
+          if (typeof ratio === 'number' && !leadsChannel.current) scrollRef.current.followTo(ratio);
         } else if (message.type === 'command') {
           const action = asAction(Reflect.get(data, 'action'));
           if (action !== null) performRef.current(action);
@@ -294,9 +313,16 @@ export default function PrompterView(props: PrompterViewProps) {
     };
   }, [capabilities.liveSync, props.apiBase, props.deviceId, props.deviceLabel, script.id]);
 
-  // The leading display tells the others where it is, and remotes what it is doing.
+  // Who is on the script: when someone joins, the leader says where it is again (below).
+  const deviceIds = devices.map((device) => device.client_id).join(',');
+  // Leading as the channel says, not as assumed before it has said anything: a display that
+  // has only just opened must not broadcast its top-of-script position over the real leader's.
+  const leadsOthers = devices.some((device) => device.client_id === props.deviceId && device.main);
+
+  // The leading display tells the others where it is, and remotes what it is doing; again
+  // whenever a device joins, so a display opened late is put where the leader already is.
   useEffect(() => {
-    if (!isMain || !capabilities.liveSync) return undefined;
+    if (!leadsOthers || !capabilities.liveSync) return undefined;
     let lastRatio = -1;
     const position = setInterval(() => {
       const ratio = scrollRef.current.ratio();
@@ -322,7 +348,7 @@ export default function PrompterView(props: PrompterViewProps) {
       clearInterval(position);
       clearInterval(state);
     };
-  }, [isMain, capabilities.liveSync, settings.scrollMode, script.title]);
+  }, [leadsOthers, capabilities.liveSync, settings.scrollMode, script.title, deviceIds]);
 
   // Voice-follow: listen while playing in voice mode on the leading display.
   useEffect(() => {
@@ -471,8 +497,9 @@ export default function PrompterView(props: PrompterViewProps) {
               <ToolbarButton label='Slower' onClick={() => perform('slower')}>
                 <Minus className='h-4 w-4' />
               </ToolbarButton>
-              <span className='flex items-center gap-1 text-sm tabular-nums'>
+              <span className='flex items-center gap-1 text-sm tabular-nums' title='Words a minute'>
                 <Gauge className='h-4 w-4' aria-hidden /> {scroll.speed}
+                <span className='sr-only'> words a minute</span>
               </span>
               <ToolbarButton label='Faster' onClick={() => perform('faster')}>
                 <Plus className='h-4 w-4' />
@@ -523,20 +550,8 @@ export default function PrompterView(props: PrompterViewProps) {
       <Sheet open={panel !== null} onOpenChange={(open) => !open && setPanel(null)}>
         <SheetContent className='overflow-y-auto'>
           <SheetHeader>
-            <SheetTitle>
-              {panel === 'display'
-                ? 'Display'
-                : panel === 'scrolling'
-                  ? 'Scrolling'
-                  : panel === 'record'
-                    ? 'Record a take'
-                    : 'Devices and remote'}
-            </SheetTitle>
-            <SheetDescription>
-              {panel === 'record'
-                ? 'The script stays on your screen; it is never in the video.'
-                : 'Changes apply at once. Save them as your default from the toolbar.'}
-            </SheetDescription>
+            <SheetTitle>{panel === null ? '' : PANELS[panel].title}</SheetTitle>
+            <SheetDescription>{panel === null ? '' : PANELS[panel].description}</SheetDescription>
           </SheetHeader>
           <div className='py-4'>
             {panel === 'display' && <DisplaySettingsForm settings={settings} onChange={props.onSettingsChange} />}

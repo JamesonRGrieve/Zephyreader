@@ -47,3 +47,23 @@ test('the remote starts and pauses the display, and a second display follows', a
 
   await person.context.close();
 });
+
+test('a display that joins late is put where the leader already is', async ({ browser }, testInfo) => {
+  const person = await signedInPerson(browser, testInfo);
+  const script = await makeScript(person.page, 'Late joiner', LONG_SCRIPT);
+  const display = person.page;
+  await display.goto(`/present/${script.id}`);
+  await expect(display.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+  const leader = display.getByLabel('Script', { exact: true });
+  await display.keyboard.press('PageDown');
+  await display.keyboard.press('PageDown');
+  await expect.poll(async () => leader.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+  // The leader has stopped moving; the newcomer still ends up where it is.
+  const late = await person.context.newPage();
+  await late.goto(`/present/${script.id}`);
+  await expect(late.getByText('Following the leading display')).toBeVisible();
+  const follower = late.getByLabel('Script', { exact: true });
+  await expect.poll(async () => follower.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await person.context.close();
+});

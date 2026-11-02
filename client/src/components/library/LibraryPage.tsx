@@ -6,7 +6,15 @@ import { toast } from 'zephyrex/hooks/useToast';
 import ConfirmDialog from '~/components/common/ConfirmDialog';
 import NameDialog from '~/components/common/NameDialog';
 import { useCapabilities } from '~/features/capabilities';
-import { useFolders, useRecordActions, useScripts, type CloudFile, type Folder, type Script } from '~/features/data/records';
+import {
+  useFolders,
+  usePrompterSettings,
+  useRecordActions,
+  useScripts,
+  type CloudFile,
+  type Folder,
+  type Script,
+} from '~/features/data/records';
 import { IMPORT_ACCEPT, importFile } from '~/features/import/fileImport';
 import DriveImportDialog from './DriveImportDialog';
 import { copyTitle } from './libraryView';
@@ -37,6 +45,7 @@ export default function LibraryPage() {
   const scripts = useScripts();
   const folders = useFolders();
   const actions = useRecordActions();
+  const { settings } = usePrompterSettings();
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
   const fileInput = useRef<HTMLInputElement>(null);
   const close = () => setPending({ kind: 'none' });
@@ -85,6 +94,7 @@ export default function LibraryPage() {
         scripts={scripts.data}
         folders={folders.data}
         googleDrive={capabilities.googleDrive}
+        wordsPerMinute={settings.speed}
         onCreate={() =>
           void openNew({ title: 'Untitled script', content: '' }).catch((error: unknown) =>
             failure(error, 'create a script'),

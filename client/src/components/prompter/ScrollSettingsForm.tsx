@@ -64,7 +64,7 @@ export default function ScrollSettingsForm({ settings, onChange, engines }: Scro
         <div className='flex flex-col gap-2'>
           <div className='flex justify-between'>
             <Label htmlFor={`${id}-speed`}>Speed</Label>
-            <span className='text-muted-foreground text-sm tabular-nums'>{settings.speed}</span>
+            <span className='text-muted-foreground text-sm tabular-nums'>{settings.speed} words a minute</span>
           </div>
           <Slider
             id={`${id}-speed`}

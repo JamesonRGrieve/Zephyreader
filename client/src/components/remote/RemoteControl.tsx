@@ -27,25 +27,29 @@ export interface RemoteControlProps {
   deviceLabel: string;
 }
 
+/** A big button: its icon, and what it does in words beneath (an icon alone is guesswork on a phone in a hurry). */
 function Big({
   label,
+  icon,
   onPress,
-  children,
+  disabled,
   wide,
 }: {
   label: string;
+  icon: ReactNode;
   onPress: () => void;
-  children: ReactNode;
+  disabled: boolean;
   wide?: boolean;
 }) {
   return (
     <Button
       variant='outline'
       onClick={onPress}
-      aria-label={label}
-      className={`h-20 text-lg ${wide === true ? 'col-span-3' : ''}`}
+      disabled={disabled}
+      className={`h-20 ${wide === true ? 'col-span-3 gap-2 text-lg' : 'flex-col gap-1 text-xs'}`}
     >
-      {children}
+      {icon}
+      <span>{label}</span>
     </Button>
   );
 }
@@ -74,6 +78,8 @@ export default function RemoteControl({ scriptId, apiBase, deviceId, deviceLabel
 
   const send = (action: PrompterAction) => void channel.current?.send('command', { action });
   const displays = devices.filter((device) => !(device.label ?? '').startsWith(REMOTE_LABEL_PREFIX));
+  // Nothing to drive until a prompter is open: the buttons say so by being off.
+  const idle = !connected || displays.length === 0;
 
   return (
     <div className='mx-auto flex w-full max-w-md flex-col gap-4'>
@@ -91,41 +97,59 @@ export default function RemoteControl({ scriptId, apiBase, deviceId, deviceLabel
             <p className='text-muted-foreground text-sm tabular-nums'>
               {state.playing ? 'Scrolling' : 'Paused'} · {clock(state.elapsed)}
               {state.secondsLeft !== null && ` · ${clock(state.secondsLeft)} left`}
-              {state.mode === 'constant' && ` · speed ${state.speed}`}
+              {state.mode === 'constant' && ` · ${state.speed} words a minute`}
             </p>
           </div>
         )}
       </div>
       <div className='grid grid-cols-3 gap-3'>
-        <Big label={state?.playing === true ? 'Pause' : 'Start'} onPress={() => send('playPause')} wide>
-          {state?.playing === true ? (
-            <Pause className='mr-2 h-6 w-6' aria-hidden />
-          ) : (
-            <Play className='mr-2 h-6 w-6' aria-hidden />
-          )}
-          {state?.playing === true ? 'Pause' : 'Start'}
-        </Big>
-        <Big label='Slower' onPress={() => send('slower')}>
-          <Minus className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Back to the start' onPress={() => send('toStart')}>
-          <ChevronFirst className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Faster' onPress={() => send('faster')}>
-          <Plus className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Scroll back' onPress={() => send('scrollBack')}>
-          <Rewind className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Previous cue' onPress={() => send('previousCue')}>
-          <ChevronsLeft className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Scroll forward' onPress={() => send('scrollForward')}>
-          <FastForward className='h-6 w-6' aria-hidden />
-        </Big>
-        <Big label='Next cue' onPress={() => send('nextCue')} wide>
-          <ChevronsRight className='mr-2 h-6 w-6' aria-hidden /> Next cue
-        </Big>
+        <Big
+          label={state?.playing === true ? 'Pause' : 'Start'}
+          icon={
+            state?.playing === true ? <Pause className='h-6 w-6' aria-hidden /> : <Play className='h-6 w-6' aria-hidden />
+          }
+          onPress={() => send('playPause')}
+          disabled={idle}
+          wide
+        />
+        <Big
+          label='Slower'
+          icon={<Minus className='h-6 w-6' aria-hidden />}
+          onPress={() => send('slower')}
+          disabled={idle}
+        />
+        <Big
+          label='To the start'
+          icon={<ChevronFirst className='h-6 w-6' aria-hidden />}
+          onPress={() => send('toStart')}
+          disabled={idle}
+        />
+        <Big label='Faster' icon={<Plus className='h-6 w-6' aria-hidden />} onPress={() => send('faster')} disabled={idle} />
+        <Big
+          label='Scroll back'
+          icon={<Rewind className='h-6 w-6' aria-hidden />}
+          onPress={() => send('scrollBack')}
+          disabled={idle}
+        />
+        <Big
+          label='Previous cue'
+          icon={<ChevronsLeft className='h-6 w-6' aria-hidden />}
+          onPress={() => send('previousCue')}
+          disabled={idle}
+        />
+        <Big
+          label='Scroll forward'
+          icon={<FastForward className='h-6 w-6' aria-hidden />}
+          onPress={() => send('scrollForward')}
+          disabled={idle}
+        />
+        <Big
+          label='Next cue'
+          icon={<ChevronsRight className='h-6 w-6' aria-hidden />}
+          onPress={() => send('nextCue')}
+          disabled={idle}
+          wide
+        />
       </div>
     </div>
   );

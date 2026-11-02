@@ -157,16 +157,23 @@ export default function RecordPanel({ title, canUpload, upload }: RecordPanelPro
         Object.keys(RESOLUTIONS).map((option) => ({ value: option, label: option })),
       )}
       {/* A muted live preview of what is recorded; it has no speech to caption. */}
-      <video
-        ref={preview}
-        autoPlay
-        muted
-        playsInline
-        className='bg-muted aspect-video w-full rounded-md'
-        aria-label='Recording preview'
-      >
-        <track kind='captions' />
-      </video>
+      <div className='relative'>
+        <video
+          ref={preview}
+          autoPlay
+          muted
+          playsInline
+          className='bg-muted aspect-video w-full rounded-md'
+          aria-label='Recording preview'
+        >
+          <track kind='captions' />
+        </video>
+        {!recording && (
+          <p className='text-muted-foreground absolute inset-0 flex items-center justify-center p-4 text-center text-sm'>
+            What you record shows here once you start.
+          </p>
+        )}
+      </div>
       {recording ? (
         <Button variant='destructive' onClick={() => void stop()}>
           <Square className='mr-2 h-4 w-4' aria-hidden /> Stop recording

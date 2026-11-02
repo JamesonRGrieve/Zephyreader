@@ -6,6 +6,7 @@ import { serverInstant } from 'zephyrex';
 import { Button } from 'zephyrex/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from 'zephyrex/ui/dialog';
 import { Input } from 'zephyrex/ui/input';
+import { formatDay } from '~/lib/dates';
 import type { CloudFile } from '~/features/data/records';
 
 /** How long the search waits after the last keystroke before asking Drive. */
@@ -81,7 +82,7 @@ export default function DriveImportDialog({ open, list, onPick, onClose }: Drive
                       <span className='block truncate'>{file.name}</span>
                       {file.modified_at !== null && (
                         <span className='text-muted-foreground block text-xs'>
-                          Changed {serverInstant(file.modified_at).toLocaleDateString()}
+                          Changed {formatDay(serverInstant(file.modified_at))}
                         </span>
                       )}
                     </span>

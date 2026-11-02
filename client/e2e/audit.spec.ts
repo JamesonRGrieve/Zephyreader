@@ -10,6 +10,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
+  devices,
+  request,
   test,
   type Browser,
   type ConsoleMessage,
@@ -23,9 +25,10 @@ import { signIn } from './support/people';
 import { settled } from './support/settled';
 
 const AUDIT_DIR = process.env.VISUAL_AUDIT ?? '';
+// Real devices (their browsers' user agents, touch and mobile behaviour), at the audit's sizes.
 const VIEWPORTS = {
-  desktop: { viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
-  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  desktop: { ...devices['Desktop Chrome'], viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1 },
+  phone: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
 } as const;
 const THEMES = ['dark', 'light'] as const;
 /** The dev server's own badge is not part of the app: leave it out of the shots. */
@@ -63,10 +66,14 @@ interface ShotReport {
   failedRequests: string[];
   /** Requests to any origin but the app's own: a self-hosted page makes none. */
   foreignRequests: string[];
+  /** The page's own links that lead nowhere, as `status url`. */
+  brokenLinks: string[];
   overflow: number;
   h1: number;
   imagesWithoutAlt: number;
   unnamedLinks: number;
+  /** Buttons a screen reader would announce only as 'button'. */
+  unnamedButtons: number;
 }
 
 async function shoot(page: Page, origin: string, name: string, url: string, reports: ShotReport[]): Promise<void> {
@@ -104,9 +111,29 @@ async function shoot(page: Page, origin: string, name: string, url: string, repo
         !link.getAttribute('aria-label') &&
         !link.querySelector('[aria-label], img[alt]'),
     ).length,
+    unnamedButtons: [...document.querySelectorAll('button, [role="button"]')].filter(
+      (button) =>
+        (button.textContent ?? '').trim() === '' &&
+        !button.getAttribute('aria-label') &&
+        !button.getAttribute('aria-labelledby') &&
+        !button.getAttribute('title') &&
+        ((button as HTMLButtonElement).labels?.length ?? 0) === 0,
+    ).length,
     title: document.title,
   }));
   await page.screenshot({ path: path.join(AUDIT_DIR, `${name}.png`), fullPage: true, style: HIDE_DEV_TOOLS });
+  const brokenLinks: string[] = [];
+  const hrefs = await page.evaluate(() => [
+    ...new Set([...document.querySelectorAll('a[href]')].map((link) => (link as HTMLAnchorElement).href)),
+  ]);
+  // Checked from a copy of the page's cookies, so following a link (a sign-in redirect that
+  // remembers where to return) cannot change what the page itself does next.
+  const checker = await request.newContext({ storageState: await page.context().storageState() });
+  for (const href of hrefs.filter((candidate) => new URL(candidate).origin === origin)) {
+    const answer = await checker.get(href, { maxRedirects: 5 });
+    if (answer.status() >= 400) brokenLinks.push(`${answer.status()} ${href}`);
+  }
+  await checker.dispose();
   // Only this page's own traffic: what the test does next is not its doing.
   page.off('response', onResponse);
   page.off('request', onRequest);
@@ -120,6 +147,7 @@ async function shoot(page: Page, origin: string, name: string, url: string, repo
     pageErrors,
     failedRequests,
     foreignRequests,
+    brokenLinks,
     ...facts,
   });
 }
@@ -180,7 +208,6 @@ async function audit(
     ['recordings', '/recordings'],
     ['settings', '/settings'],
     ['account', '/user/manage'],
-    ['api-reference', '/docs/api-reference'],
   ] as const) {
     await shoot(page, origin, `${prefix}-in-${name}`, url, reports);
   }

@@ -18,6 +18,7 @@ import {
 } from 'zephyrex/ui/dropdown-menu';
 import { Input } from 'zephyrex/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'zephyrex/ui/select';
+import { formatDay } from '~/lib/dates';
 import { readingSeconds } from '~/features/prompter/script';
 import { clock } from '~/features/prompter/timing';
 import type { Folder, Script } from '~/features/data/records';
@@ -38,6 +39,8 @@ export interface ScriptLibraryProps {
   onCreateFolder: () => void;
   onRenameFolder: (folder: Folder) => void;
   onDeleteFolder: (folder: Folder) => void;
+  /** The presenter's pace, for each script's reading-time estimate. */
+  wordsPerMinute: number;
 }
 
 const SORT_LABELS: Record<LibrarySort, string> = {
@@ -52,7 +55,7 @@ function FolderButton({ active, onClick, children }: { active: boolean; onClick:
       type='button'
       onClick={onClick}
       aria-current={active ? 'true' : undefined}
-      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm md:w-full md:whitespace-normal ${
         active ? 'bg-accent text-accent-foreground font-medium' : 'hover:bg-muted'
       }`}
     >
@@ -62,7 +65,7 @@ function FolderButton({ active, onClick, children }: { active: boolean; onClick:
 }
 
 export default function ScriptLibrary(props: ScriptLibraryProps) {
-  const { scripts, folders, googleDrive } = props;
+  const { scripts, folders, googleDrive, wordsPerMinute } = props;
   const router = useRouter();
   const [filter, setFilter] = useState<LibraryFilter>({ kind: 'all' });
   const [search, setSearch] = useState('');
@@ -72,7 +75,11 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
 
   return (
     <div className='flex flex-col gap-6 md:flex-row'>
-      <nav aria-label='Folders' className='flex shrink-0 flex-col gap-1 md:w-56'>
+      {/* A row that scrolls sideways on a phone, so the scripts stay in view; a column beside them on a wider screen. */}
+      <nav
+        aria-label='Folders'
+        className='flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-56 md:flex-col md:overflow-visible md:pb-0'
+      >
         <FolderButton active={filter.kind === 'all'} onClick={() => setFilter({ kind: 'all' })}>
           All scripts <span className='text-muted-foreground ml-auto text-xs'>{scripts.length}</span>
         </FolderButton>
@@ -80,7 +87,7 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
           <Star className='h-4 w-4' aria-hidden /> Starred
         </FolderButton>
         {folders.map((folder) => (
-          <div key={folder.id} className='group flex items-center'>
+          <div key={folder.id} className='group flex shrink-0 items-center'>
             <FolderButton
               active={filter.kind === 'folder' && filter.folderId === folder.id}
               onClick={() => setFilter({ kind: 'folder', folderId: folder.id })}
@@ -100,7 +107,7 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
             </DropdownMenu>
           </div>
         ))}
-        <Button variant='ghost' className='justify-start' onClick={props.onCreateFolder}>
+        <Button variant='ghost' className='shrink-0 justify-start' onClick={props.onCreateFolder}>
           <FolderPlus className='mr-2 h-4 w-4' aria-hidden /> New folder
         </Button>
       </nav>
@@ -173,9 +180,9 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
                 <Link href={`/script/${script.id}`} className='min-w-0 flex-1'>
                   <span className='block truncate font-medium'>{script.title}</span>
                   <span className='text-muted-foreground block text-xs'>
-                    {script.word_count} words · about {clock(readingSeconds(script.word_count))}
+                    {script.word_count} words · about {clock(readingSeconds(script.word_count, wordsPerMinute))}
                     {script.script_folder_id !== null && ` · ${folderName(script.script_folder_id) ?? ''}`}
-                    {script.updated_at !== null && ` · changed ${serverInstant(script.updated_at).toLocaleDateString()}`}
+                    {script.updated_at !== null && ` · changed ${formatDay(serverInstant(script.updated_at))}`}
                   </span>
                 </Link>
                 <Button

@@ -4,11 +4,11 @@ import type { ReactElement } from 'react';
 /**
  * Zephyreader's mark: three lines of script on the theme's accent, a pointer at the eye line
  * beside the middle one. src/app/icon.svg is the same drawing in fixed colours, for the
- * browser tab and the installed app.
+ * browser tab and the installed app. Decorative: the app's name always stands beside it.
  */
 export function ZephyreaderLogo(): ReactElement {
   return (
-    <svg viewBox='0 0 32 32' className='size-8' role='img' aria-label='Zephyreader'>
+    <svg viewBox='0 0 32 32' className='size-8' aria-hidden>
       <rect width='32' height='32' rx='7' className='fill-primary' />
       <g className='fill-primary-foreground'>
         <rect x='10' y='9.25' width='14' height='2.5' rx='1.25' opacity='0.55' />

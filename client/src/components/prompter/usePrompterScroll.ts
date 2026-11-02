@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { adjacentCue, type PreparedScript } from '~/features/prompter/script';
 import { SPEED, type PrompterSettings } from '~/features/prompter/settings';
-import { progress, secondsLeft, timedSpeed, wordsPerMinute } from '~/features/prompter/timing';
+import { pixelsPerWord, progress, scrollPace, secondsLeft, timedSpeed, wordsPerMinute } from '~/features/prompter/timing';
 
 /** How much of the remaining gap a voice-follow scroll closes each second (smooth catch-up). */
 const VOICE_CATCH_UP_PER_SECOND = 4;
@@ -29,6 +29,7 @@ export interface PrompterScroll {
   progress: number;
   secondsLeft: number | null;
   wordsPerMinute: number | null;
+  /** The pace, in words a minute. */
   speed: number;
   toggle: () => void;
   stop: () => void;
@@ -86,10 +87,16 @@ export function usePrompterScroll(
   const [speedChange, setSpeedChange] = useState<{ from: number; to: number } | null>(null);
   const speed = speedChange !== null && speedChange.from === settings.speed ? speedChange.to : settings.speed;
   const [view, setView] = useState({ progress: 0, remaining: 0 });
+  // How far apart the words sit as laid out now, which turns words a minute into pixels a second.
+  const [wordSpacing, setWordSpacing] = useState(0);
+  const steadyPace = scrollPace(speed, wordSpacing);
   const offsets = useRef<number[]>([]);
   const position = useRef(0);
   const voiceTarget = useRef<number | null>(null);
   const elapsedRef = useRef(0);
+  // Where the leader last put this display, while it follows: applied again whenever the layout
+  // is measured, so a position that arrived before the script was laid out is not lost.
+  const followed = useRef<number | null>(null);
 
   const eyeLineY = useCallback(
     (element: HTMLElement) => element.clientHeight * settings.eyeLinePosition,
@@ -112,9 +119,18 @@ export function usePrompterScroll(
     const element = containerRef.current;
     if (element === null) return;
     offsets.current = measureWords(element);
+    setWordSpacing(pixelsPerWord(offsets.current));
+    if (followed.current !== null) {
+      element.scrollTop = followed.current * (element.scrollHeight - element.clientHeight);
+    }
     position.current = element.scrollTop;
     refresh();
   }, [containerRef, refresh]);
+
+  // A display that leads goes where it is told by its own presenter, not the last leader.
+  useEffect(() => {
+    if (isMain) followed.current = null;
+  }, [isMain]);
 
   // Re-measure whenever the words or their layout change.
   useEffect(() => {
@@ -189,7 +205,7 @@ export function usePrompterScroll(
           const pace =
             settings.scrollMode === 'timed'
               ? timedSpeed(remaining, settings.targetDurationSeconds - elapsedRef.current)
-              : speed;
+              : steadyPace;
           position.current = Math.min(end, position.current + pace * dt);
           element.scrollTop = position.current;
           if (remaining <= 0 || position.current >= end) setPlaying(false);
@@ -209,7 +225,7 @@ export function usePrompterScroll(
       clearInterval(clock);
       setElapsed(elapsedRef.current);
     };
-  }, [playing, isMain, containerRef, settings.scrollMode, settings.targetDurationSeconds, speed, refresh, eyeLineY]);
+  }, [playing, isMain, containerRef, settings.scrollMode, settings.targetDurationSeconds, steadyPace, refresh, eyeLineY]);
 
   const toggle = useCallback(() => {
     if (playing || countdown !== null) {
@@ -233,7 +249,7 @@ export function usePrompterScroll(
       settings.scrollMode === 'timed'
         ? Math.max(0, settings.targetDurationSeconds - elapsed)
         : settings.scrollMode === 'constant'
-          ? secondsLeft(view.remaining, speed)
+          ? secondsLeft(view.remaining, steadyPace)
           : null,
     wordsPerMinute: wordsPerMinute(wordsRead, elapsed),
     speed,
@@ -259,6 +275,7 @@ export function usePrompterScroll(
       if (element !== null && next !== undefined) voiceTarget.current = next - eyeLineY(element);
     },
     followTo: (ratio) => {
+      followed.current = ratio;
       const element = containerRef.current;
       if (element !== null) scrollTo(ratio * (element.scrollHeight - element.clientHeight));
     },

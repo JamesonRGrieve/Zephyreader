@@ -14,7 +14,6 @@ import {
   FONT_SIZE,
   LINE_HEIGHT,
   MARGIN_PERCENT,
-  READING_WPM,
   THEMES,
   type PrompterSettings,
 } from '~/features/prompter/settings';
@@ -42,7 +41,6 @@ const SLIDER_LABELS = {
   marginPercent: 'Side margins',
   eyeLinePosition: 'Eye line height',
   countdownSeconds: 'Countdown before scrolling',
-  readingWpm: 'Your reading pace',
 } as const;
 const ALIGN_LABELS: Record<PrompterSettings['align'], string> = { left: 'Left', center: 'Centred' };
 
@@ -177,9 +175,6 @@ export default function DisplaySettingsForm({ settings, onChange }: DisplaySetti
       {toggle('highlightReadingLine', 'Underline the word on the eye line')}
       <Row label='Countdown before scrolling' htmlFor={`${id}-countdownSeconds`} value={`${settings.countdownSeconds}s`}>
         {slider('countdownSeconds', COUNTDOWN_SECONDS)}
-      </Row>
-      <Row label='Your reading pace' htmlFor={`${id}-readingWpm`} value={`${settings.readingWpm} words a minute`}>
-        {slider('readingWpm', READING_WPM)}
       </Row>
     </div>
   );

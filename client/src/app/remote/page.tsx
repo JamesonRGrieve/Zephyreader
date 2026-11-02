@@ -36,8 +36,24 @@ function Remote() {
     );
   }
   if (device === null) return null;
+  const title = scripts.data?.find((script) => script.id === scriptId)?.title;
   return (
-    <RemoteControl scriptId={scriptId} apiBase={appConfig.server.baseUrl} deviceId={device.id} deviceLabel={device.label} />
+    <div className='flex flex-col gap-4'>
+      <p className='text-muted-foreground flex flex-wrap items-baseline justify-between gap-x-3 text-sm'>
+        <span className='min-w-0'>
+          Driving <span className='text-foreground font-medium'>{title ?? 'this script'}</span>
+        </span>
+        <Link href='/remote' className='underline'>
+          Choose another script
+        </Link>
+      </p>
+      <RemoteControl
+        scriptId={scriptId}
+        apiBase={appConfig.server.baseUrl}
+        deviceId={device.id}
+        deviceLabel={device.label}
+      />
+    </div>
   );
 }
 

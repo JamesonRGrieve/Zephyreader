@@ -26,7 +26,8 @@ export interface ScriptEditorProps {
   /** Writes `changes` to the script the user saw (If-Match); answers with the saved script. */
   write: (seen: Script, changes: Partial<Script>) => Promise<Script>;
   rewrite: AiPanelProps['run'];
-  readingWpm: number;
+  /** The presenter's pace, for the reading-time estimate. */
+  wordsPerMinute: number;
 }
 
 interface Draft {
@@ -48,7 +49,7 @@ function download(name: string, text: string, type: string): void {
   URL.revokeObjectURL(url);
 }
 
-export default function ScriptEditor({ script, capabilities, write, rewrite, readingWpm }: ScriptEditorProps) {
+export default function ScriptEditor({ script, capabilities, write, rewrite, wordsPerMinute }: ScriptEditorProps) {
   const titleId = useId();
   const contentId = useId();
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -173,7 +174,7 @@ export default function ScriptEditor({ script, capabilities, write, rewrite, rea
             </Button>
           )}
           <span className='text-muted-foreground ml-auto text-sm' aria-live='polite'>
-            {words} words · about {clock(readingSeconds(words, readingWpm))} ·{' '}
+            {words} words · about {clock(readingSeconds(words, wordsPerMinute))} ·{' '}
             {saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'Saved'}
           </span>
         </div>

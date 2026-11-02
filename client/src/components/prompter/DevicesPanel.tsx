@@ -18,10 +18,6 @@ export interface DevicesPanelProps {
 export default function DevicesPanel({ devices, thisDevice, isMain, connected, remoteHref, onClaim }: DevicesPanelProps) {
   return (
     <div className='flex flex-col gap-4'>
-      <p className='text-muted-foreground text-sm'>
-        Open this script on another screen to mirror it, or open the remote on your phone to drive it. One device leads; the
-        others follow.
-      </p>
       {!connected && (
         <p role='status' className='text-destructive text-sm'>
           Reconnecting…
@@ -31,10 +27,10 @@ export default function DevicesPanel({ devices, thisDevice, isMain, connected, r
         {devices.map((device) => (
           <li key={device.client_id} className='flex items-center gap-3 px-3 py-2'>
             <MonitorSmartphone className='h-4 w-4 shrink-0' aria-hidden />
-            <span className='min-w-0 flex-1 truncate text-sm'>
-              {device.label ?? device.client_id}
-              {device.client_id === thisDevice && ' (this one)'}
-            </span>
+            <span className='min-w-0 flex-1 truncate text-sm'>{device.label ?? device.client_id}</span>
+            {device.client_id === thisDevice && (
+              <span className='text-muted-foreground shrink-0 rounded border px-1.5 text-xs'>This device</span>
+            )}
             {device.main && <Crown className='text-primary h-4 w-4' aria-label='Leading' />}
           </li>
         ))}

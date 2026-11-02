@@ -35,7 +35,7 @@ export default function ScriptPage({ params }: { params: Promise<{ id: string }>
         <ScriptEditor
           script={script.data}
           capabilities={capabilities}
-          readingWpm={settings.readingWpm}
+          wordsPerMinute={settings.speed}
           rewrite={actions.rewrite}
           write={async (seen, changes) => {
             const saved = await actions.updateScript(seen, changes);
