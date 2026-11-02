@@ -8,7 +8,7 @@ import type { PrompterPreference, Script, ScriptFolder } from '@prisma/client';
 import { z } from 'zod';
 import { ApiError, recordError } from '~/lib/apiErrors';
 import { prisma } from '~/lib/prisma';
-import type { ResourceSpec } from '~/lib/records';
+import { notFound, type ResourceSpec } from '~/lib/records';
 import { spokenWordCount as wordCount } from '~/features/prompter/script';
 
 // The server's limits (BLL_Teleprompter.py), so both variants accept the same records.
@@ -41,6 +41,7 @@ const folderUpdate = z.object({ name: z.string().min(1).max(MAX_FOLDER_NAME).opt
 export const scriptFolders: ResourceSpec<ScriptFolder, z.infer<typeof folderCreate>, z.infer<typeof folderUpdate>> = {
   resource: 'script_folder',
   plural: 'script_folders',
+  modelName: 'ScriptFolderModel',
   createSchema: folderCreate,
   updateSchema: folderUpdate,
   list: (ownerId) => prisma.scriptFolder.findMany({ where: { createdById: ownerId }, orderBy: { createdAt: 'asc' } }),
@@ -87,12 +88,13 @@ const scriptUpdate = z.object({
 async function ownFolder(folderId: string | null | undefined, ownerId: string): Promise<void> {
   if (folderId === null || folderId === undefined) return;
   const folder = await prisma.scriptFolder.findFirst({ where: { id: folderId, createdById: ownerId } });
-  if (folder === null) throw recordError(404, 'Request searched script_folder and could not find the required record.');
+  if (folder === null) throw notFound('ScriptFolderModel');
 }
 
 export const scripts: ResourceSpec<Script, z.infer<typeof scriptCreate>, z.infer<typeof scriptUpdate>> = {
   resource: 'script',
   plural: 'scripts',
+  modelName: 'ScriptModel',
   createSchema: scriptCreate,
   updateSchema: scriptUpdate,
   list: (ownerId) => prisma.script.findMany({ where: { createdById: ownerId }, orderBy: { createdAt: 'asc' } }),
@@ -167,6 +169,7 @@ export const prompterPreferences: ResourceSpec<
 > = {
   resource: 'prompter_preference',
   plural: 'prompter_preferences',
+  modelName: 'PrompterPreferenceModel',
   createSchema: preferenceCreate,
   updateSchema: preferenceUpdate,
   list: (ownerId) => prisma.prompterPreference.findMany({ where: { createdById: ownerId } }),

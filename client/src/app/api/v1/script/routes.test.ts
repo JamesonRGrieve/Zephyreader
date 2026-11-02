@@ -109,7 +109,7 @@ describe('scripts', () => {
     const read = await getScript(call(`/v1/script/${id}`, { headers: theirs }), params(id));
     expect(read.status).toBe(404);
     await expect(read.json()).resolves.toEqual({
-      detail: { message: 'Request searched script and could not find the required record.' },
+      detail: { message: 'Request searched ScriptModel and could not find the required record.' },
     });
     const list = await listScripts(call('/v1/script', { headers: theirs }), noParams);
     await expect(list.json()).resolves.toMatchObject({ scripts: [] });

@@ -40,6 +40,8 @@ export interface ResourceSpec<Row extends RecordRow, Create, Update> {
   resource: string;
   /** The plural the list answers with (`scripts`). */
   plural: string;
+  /** The framework's model name, which its not-found answer names (`ScriptModel`). */
+  modelName: string;
   createSchema: z.ZodType<Create>;
   updateSchema: z.ZodType<Update>;
   list(ownerId: string): Promise<Row[]>;
@@ -90,8 +92,9 @@ function parse<T>(schema: z.ZodType<T>, envelope: object, resource: string): T {
   return parsed.data;
 }
 
-function notFound(resource: string): ApiError {
-  return recordError(404, `Request searched ${resource} and could not find the required record.`);
+/** The framework's answer for a record that isn't there (or isn't the caller's). */
+export function notFound(modelName: string): ApiError {
+  return recordError(404, `Request searched ${modelName} and could not find the required record.`);
 }
 
 /** The window a list request names (`offset`, `limit`), as the framework reads them. */
@@ -170,7 +173,7 @@ export function recordRoutes<Row extends RecordRow, Create, Update>(
     const user = await authenticate(request);
     const { id } = await context.params;
     const row = await spec.find(id, user.id);
-    if (row === null) throw notFound(spec.resource);
+    if (row === null) throw notFound(spec.modelName);
     return { user, row };
   };
   return {
@@ -198,7 +201,7 @@ export function recordRoutes<Row extends RecordRow, Create, Update>(
         const updated = await spec.updateIfCurrent(row.id, row.updatedAt, input, nextUpdateStamp(row.updatedAt), user.id);
         if (updated === null) {
           const current = await spec.find(row.id, user.id);
-          if (current === null) throw notFound(spec.resource);
+          if (current === null) throw notFound(spec.modelName);
           return stale(spec, current);
         }
         return NextResponse.json({ [spec.resource]: toDto(spec, updated) }, { headers: { ETag: versionTag(updated) } });
