@@ -74,14 +74,29 @@ describe('LiveHub', () => {
     expect(display.mains()).toEqual({ display: true });
   });
 
-  it('keeps channels private to their user and refuses a device joining twice', () => {
+  it('keeps channels private to their user', () => {
     const hub = new LiveHub();
     const mine = new Device();
     hub.join('ada', 'shared', 'a-laptop', null, mine);
     hub.join('bob', 'shared', 'b-laptop', null, new Device());
     hub.publish('bob', 'shared', { type: 'scroll', sender: 'b-laptop', data: 1 });
     expect(mine.messages().map((message) => message.type)).toEqual(['presence']);
-    expect(() => hub.join('ada', 'shared', 'a-laptop', null, new Device())).toThrow(ApiError);
+  });
+
+  it('lets a device that rejoins replace its old stream, keeping its lead (as the framework does)', () => {
+    const hub = new LiveHub();
+    const first = new Device();
+    hub.join('ada', 'prompter', 'tablet', null, first);
+    hub.join('ada', 'prompter', 'phone', null, new Device());
+    const again = new Device();
+    hub.join('ada', 'prompter', 'tablet', null, again);
+    expect(first.closed).toBe(true);
+    // The old stream's cleanup leaves the new one in place.
+    hub.leave('ada', 'prompter', 'tablet', first);
+    expect(hub.devices('ada', 'prompter')).toEqual([
+      { client_id: 'phone', label: null, main: false, connected: true },
+      { client_id: 'tablet', label: null, main: true, connected: true },
+    ]);
   });
 
   it('drops a device that falls behind instead of buffering forever', () => {

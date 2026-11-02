@@ -113,22 +113,28 @@ export class LiveHub {
     return this.channel(userId, channel)?.devices.has(clientId) ?? false;
   }
 
+  /**
+   * Opens the device's stream. A device that joins again (it reconnected, or reloaded)
+   * replaces its old stream, which is closed, keeping its place and its lead.
+   */
   join(userId: string, channel: string, clientId: string, label: string | null, sink: LiveSink): void {
     const key = this.key(userId, channel);
     const found = this.channels.get(key) ?? { devices: new Map<string, Subscriber>(), main: null };
-    if (found.devices.has(clientId)) {
-      throw recordError(409, 'That device is already connected to the channel');
-    }
-    found.devices.set(clientId, { clientId, label, joinedAt: Date.now(), sink, queued: 0 });
+    const replaced = found.devices.get(clientId);
+    found.devices.set(clientId, { clientId, label, joinedAt: replaced?.joinedAt ?? Date.now(), sink, queued: 0 });
+    replaced?.sink.close();
     found.main ??= clientId;
     this.channels.set(key, found);
     this.announce(userId, channel);
   }
 
-  leave(userId: string, channel: string, clientId: string): void {
+  /** Forgets the device's stream; with `sink`, only if that stream is still the device's. */
+  leave(userId: string, channel: string, clientId: string, sink?: LiveSink): void {
     const key = this.key(userId, channel);
     const found = this.channels.get(key);
-    if (found?.devices.delete(clientId) !== true) return;
+    const current = found?.devices.get(clientId);
+    if (found === undefined || current === undefined || (sink !== undefined && current.sink !== sink)) return;
+    found.devices.delete(clientId);
     if (found.devices.size === 0) {
       this.channels.delete(key);
       return;
@@ -157,8 +163,8 @@ export class LiveHub {
       if (!device.sink.push(text)) {
         device.queued += 1;
         if (device.queued > DEVICE_QUEUE_SIZE) {
+          this.leave(userId, channel, device.clientId, device.sink);
           device.sink.close();
-          this.leave(userId, channel, device.clientId);
         }
       } else {
         device.queued = 0;

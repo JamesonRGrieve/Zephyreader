@@ -5,7 +5,8 @@
  * headers for the same calls, so the one UI works on both. Calls go through the app's
  * same-origin /api as a signed-in person, writes carrying their CSRF token.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { call } from './support/api';
 import { signedInPerson } from './support/people';
 
 /** A script record's fields, exactly: the framework's DTO, which lite copies. */
@@ -30,48 +31,14 @@ const SCRIPT_FIELDS = [
 ];
 const TIMESTAMP = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}$/;
 
-/** An answer, as the page's own fetch saw it. */
-interface Answer {
-  status: () => number;
-  headers: () => Record<string, string>;
-  json: () => Promise<unknown>;
-}
-
-/**
- * Calls the API from inside the page, as the app does: the browser sends the session
- * cookie, and a write echoes the CSRF cookie in X-CSRF-Token.
- */
-async function call(page: Page, method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Answer> {
-  const answer = await page.evaluate(
-    async ({ method, path, body, headers }) => {
-      const token = document.cookie.match(/(?:^|; )zx_csrf=([^;]*)/)?.[1];
-      const response = await fetch(`/api${path}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(method !== 'GET' && token !== undefined ? { 'X-CSRF-Token': decodeURIComponent(token) } : {}),
-          ...headers,
-        },
-        ...(body === null ? {} : { body: JSON.stringify(body) }),
-      });
-      const text = await response.text();
-      return { status: response.status, headers: Object.fromEntries(response.headers.entries()), text };
-    },
-    { method, path, body: body ?? null, headers },
-  );
-  return {
-    status: () => answer.status,
-    headers: () => answer.headers,
-    json: async () => JSON.parse(answer.text) as unknown,
-  };
-}
-
 test.describe('the shared contract', () => {
   test('records: shapes, versions, stale saves, refusals and deletes', async ({ browser }, testInfo) => {
     const ada = await signedInPerson(browser, testInfo);
     const bob = await signedInPerson(browser, testInfo);
 
-    const created = await call(ada.page, 'POST', '/v1/script', { script: { title: 'Keynote', content: 'Good evening [smile] everyone' } });
+    const created = await call(ada.page, 'POST', '/v1/script', {
+      script: { title: 'Keynote', content: 'Good evening [smile] everyone' },
+    });
     expect(created.status()).toBe(201);
     const { script } = (await created.json()) as { script: Record<string, unknown> };
     expect(Object.keys(script).sort()).toEqual(SCRIPT_FIELDS);
@@ -83,10 +50,16 @@ test.describe('the shared contract', () => {
 
     const listed = await call(ada.page, 'GET', '/v1/script');
     expect(listed.headers().etag).toMatch(/^W\/"/);
-    expect(await listed.json()).toMatchObject({ scripts: [{ id: script.id }], pagination: { offset: 0, total: 1, has_more: false } });
+    expect(await listed.json()).toMatchObject({
+      scripts: [{ id: script.id }],
+      pagination: { offset: 0, total: 1, has_more: false },
+    });
 
     const read = await call(ada.page, 'GET', path);
-    expect(await read.json()).toMatchObject({ script: { id: script.id }, _links: { self: { href: path }, collection: { href: '/v1/script' } } });
+    expect(await read.json()).toMatchObject({
+      script: { id: script.id },
+      _links: { self: { href: path }, collection: { href: '/v1/script' } },
+    });
 
     const unguarded = await call(ada.page, 'PUT', path, { script: { title: 'x' } });
     expect(unguarded.status()).toBe(428);
@@ -97,20 +70,27 @@ test.describe('the shared contract', () => {
 
     const stale = await call(ada.page, 'PUT', path, { script: { title: 'Overwrite' } }, { 'If-Match': etag });
     expect(stale.status()).toBe(412);
-    expect(await stale.json()).toMatchObject({ detail: 'The record was changed since it was read', current: { title: 'Keynote v2' } });
+    expect(await stale.json()).toMatchObject({
+      detail: 'The record was changed since it was read',
+      current: { title: 'Keynote v2' },
+    });
 
     const invalid = await call(ada.page, 'POST', '/v1/script', { script: { title: '' } });
     expect(invalid.status()).toBe(422);
     expect(await invalid.json()).toMatchObject({ detail: { message: 'Validation error', code: 'validation_error' } });
 
-    const shared = await call(ada.page, 'POST', '/v1/script', { script: { title: 'Shared', team_id: '00000000-0000-0000-0000-000000000001' } });
+    const shared = await call(ada.page, 'POST', '/v1/script', {
+      script: { title: 'Shared', team_id: '00000000-0000-0000-0000-000000000001' },
+    });
     expect(shared.status()).toBe(402);
     expect(await shared.json()).toEqual({ detail: { feature: 'team_sharing', upgrade_to: ['team'] } });
 
     // Another person's script is not there for them, as the framework answers it.
     const theirs = await call(bob.page, 'GET', path);
     expect(theirs.status()).toBe(404);
-    expect(await theirs.json()).toEqual({ detail: { message: 'Request searched ScriptModel and could not find the required record.' } });
+    expect(await theirs.json()).toEqual({
+      detail: { message: 'Request searched ScriptModel and could not find the required record.' },
+    });
     expect(await (await call(bob.page, 'GET', '/v1/script')).json()).toMatchObject({ scripts: [] });
 
     const current = await call(ada.page, 'GET', path);
@@ -136,9 +116,9 @@ test.describe('the shared contract', () => {
     const reserved = await call(ada.page, 'POST', '/v1/live/script-x', { client_id: 'ghost', type: 'presence' });
     expect(reserved.status()).toBe(422);
 
-    const extensions = ((await (await call(ada.page, 'GET', '/v1/extension')).json()) as { extensions: { name: string }[] }).extensions.map(
-      (extension) => extension.name,
-    );
+    const extensions = (
+      (await (await call(ada.page, 'GET', '/v1/extension')).json()) as { extensions: { name: string }[] }
+    ).extensions.map((extension) => extension.name);
     expect(extensions).toEqual(expect.arrayContaining(['teleprompter', 'live_sync', 'cloud', 'oauth_consumer']));
 
     // A Drive refusal a person can act on: signed in, but Google refuses the test provider's token.

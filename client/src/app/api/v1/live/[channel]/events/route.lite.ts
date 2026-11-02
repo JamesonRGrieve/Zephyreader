@@ -2,7 +2,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { apiErrorResponse, recordError } from '~/lib/apiErrors';
 import { authenticate } from '~/lib/auth/session';
-import { hub, KEEPALIVE_MS, MAX_LABEL_LENGTH, validName } from '~/lib/liveSync';
+import { hub, KEEPALIVE_MS, MAX_LABEL_LENGTH, validName, type LiveSink } from '~/lib/liveSync';
 
 const encoder = new TextEncoder();
 
@@ -16,41 +16,40 @@ export async function GET(request: NextRequest, context: { params: Promise<{ cha
     if (label !== null && label.length > MAX_LABEL_LENGTH) {
       throw recordError(422, `label may be at most ${MAX_LABEL_LENGTH} characters`);
     }
-    // Refused before the stream opens, so the caller gets the 409 rather than a broken stream.
-    if (hub.isConnected(user.id, channel, clientId)) {
-      throw recordError(409, 'That device is already connected to the channel');
-    }
     let keepalive: ReturnType<typeof setInterval> | null = null;
     let closed = false;
+    let sink: LiveSink | null = null;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const close = (): void => {
           if (closed) return;
           closed = true;
           if (keepalive !== null) clearInterval(keepalive);
-          hub.leave(user.id, channel, clientId);
+          if (sink !== null) hub.leave(user.id, channel, clientId, sink);
           controller.close();
         };
         controller.enqueue(encoder.encode(': connected\n\n'));
-        hub.join(user.id, channel, clientId, label, {
+        sink = {
           push(frame) {
             if (closed) return true;
             controller.enqueue(encoder.encode(frame));
             return (controller.desiredSize ?? 1) > 0;
           },
           close,
-        });
+        };
+        hub.join(user.id, channel, clientId, label, sink);
         keepalive = setInterval(() => controller.enqueue(encoder.encode(': keepalive\n\n')), KEEPALIVE_MS);
         request.signal.addEventListener('abort', close);
       },
       cancel() {
         closed = true;
         if (keepalive !== null) clearInterval(keepalive);
-        hub.leave(user.id, channel, clientId);
+        if (sink !== null) hub.leave(user.id, channel, clientId, sink);
       },
     });
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
+      // As the framework's streams (zephyrex.lib.EventStream): no proxy compresses, buffers or caches it.
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' },
     });
   } catch (error) {
     return apiErrorResponse(error) satisfies NextResponse;

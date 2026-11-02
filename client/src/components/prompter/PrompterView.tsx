@@ -203,6 +203,13 @@ export default function PrompterView(props: PrompterViewProps) {
     [isMain, props, settings, toggleFullscreen],
   );
 
+  // The latest `perform`, for the live channel's handlers: the channel lives as long as
+  // the script and device, not as long as one render's settings.
+  const performRef = useRef(perform);
+  useLayoutEffect(() => {
+    performRef.current = perform;
+  });
+
   // Keyboards, page-turners and pedals.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -276,7 +283,7 @@ export default function PrompterView(props: PrompterViewProps) {
           if (typeof ratio === 'number') scrollRef.current.followTo(ratio);
         } else if (message.type === 'command') {
           const action = asAction(Reflect.get(data, 'action'));
-          if (action !== null) perform(action);
+          if (action !== null) performRef.current(action);
         }
       },
     });
@@ -285,7 +292,7 @@ export default function PrompterView(props: PrompterViewProps) {
       live.close();
       channel.current = null;
     };
-  }, [capabilities.liveSync, props.apiBase, props.deviceId, props.deviceLabel, script.id, perform]);
+  }, [capabilities.liveSync, props.apiBase, props.deviceId, props.deviceLabel, script.id]);
 
   // The leading display tells the others where it is, and remotes what it is doing.
   useEffect(() => {
