@@ -15,7 +15,12 @@ allowBuilds:
   core-js: false
   core-js-pure: true
   esbuild: true
+  # transformers.js runs speech models in the browser (onnxruntime-web); the Node runtime's
+  # native binaries it would download are never used
+  onnxruntime-node: false
   prisma: true
+  # its postinstall only checks the installed version
+  protobufjs: false
   # ships prebuilt @img/* binaries; the install script is a build-from-source fallback
   sharp: false
   unrs-resolver: true

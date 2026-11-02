@@ -1,0 +1,154 @@
+'use client';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { Captions, Download, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { serverInstant, useClient } from 'zephyrex';
+import { toast } from 'zephyrex/hooks/useToast';
+import { Button } from 'zephyrex/ui/button';
+import ConfirmDialog from '~/components/common/ConfirmDialog';
+import { PAID_FEATURES, type Capabilities } from '~/features/capabilities';
+import { RECORDINGS_KEY, type Recording } from '~/features/data/records';
+import { clock } from '~/features/prompter/timing';
+
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+
+export interface RecordingsLibraryProps {
+  recordings: Recording[];
+  capabilities: Capabilities;
+  onChanged: () => Promise<unknown>;
+}
+
+/** The takes kept in the cloud: watch them, caption them, download or delete them. */
+export default function RecordingsLibrary({ recordings, capabilities, onChanged }: RecordingsLibraryProps) {
+  const client = useClient();
+  const [deleting, setDeleting] = useState<Recording | null>(null);
+  const [captioning, setCaptioning] = useState<string | null>(null);
+  const canCaption = capabilities.unlocked(PAID_FEATURES.captions);
+
+  const caption = async (recording: Recording) => {
+    setCaptioning(recording.id);
+    try {
+      await client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {});
+      await onChanged();
+    } catch (error) {
+      toast({
+        title: "Couldn't caption the take",
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setCaptioning(null);
+    }
+  };
+
+  if (recordings.length === 0) {
+    return (
+      <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
+        No recordings yet. Record a take from the prompter.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <ul className='grid gap-4 sm:grid-cols-2'>
+        {recordings.map((recording) => (
+          <li key={recording.id} className='flex flex-col gap-3 rounded-lg border p-4'>
+            <video
+              controls
+              preload='metadata'
+              className='bg-muted aspect-video w-full rounded-md'
+              src={client.url(`${RECORDINGS_KEY}/${recording.id}/content`)}
+            >
+              {recording.caption_segments !== null && (
+                <track
+                  kind='captions'
+                  label='Captions'
+                  default
+                  src={client.url(`${RECORDINGS_KEY}/${recording.id}/captions`, { format: 'vtt' })}
+                />
+              )}
+            </video>
+            <div>
+              <p className='truncate font-medium'>{recording.title}</p>
+              <p className='text-muted-foreground text-xs'>
+                {recording.duration_seconds !== null && `${clock(recording.duration_seconds)} · `}
+                {(recording.size_bytes / BYTES_PER_MEGABYTE).toFixed(1)} MB
+                {recording.created_at !== '' && ` · ${serverInstant(recording.created_at).toLocaleDateString()}`}
+              </p>
+            </div>
+            <div className='flex flex-wrap gap-2'>
+              <Button asChild size='sm' variant='outline'>
+                <a href={client.url(`${RECORDINGS_KEY}/${recording.id}/content`)} download>
+                  <Download className='mr-2 h-4 w-4' aria-hidden /> Video
+                </a>
+              </Button>
+              {recording.caption_segments === null ? (
+                canCaption && (
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    disabled={captioning === recording.id}
+                    onClick={() => void caption(recording)}
+                  >
+                    <Captions className='mr-2 h-4 w-4' aria-hidden />{' '}
+                    {captioning === recording.id ? 'Captioning…' : 'Make captions'}
+                  </Button>
+                )
+              ) : (
+                <>
+                  <Button asChild size='sm' variant='outline'>
+                    <a href={client.url(`${RECORDINGS_KEY}/${recording.id}/captions`, { format: 'vtt' })} download>
+                      Captions (.vtt)
+                    </a>
+                  </Button>
+                  <Button asChild size='sm' variant='outline'>
+                    <a href={client.url(`${RECORDINGS_KEY}/${recording.id}/captions`, { format: 'srt' })} download>
+                      Captions (.srt)
+                    </a>
+                  </Button>
+                </>
+              )}
+              <Button
+                size='sm'
+                variant='ghost'
+                onClick={() => setDeleting(recording)}
+                aria-label={`Delete ${recording.title}`}
+              >
+                <Trash2 className='h-4 w-4' aria-hidden />
+              </Button>
+            </div>
+            {recording.transcript !== null && (
+              <details>
+                <summary className='cursor-pointer text-sm'>Transcript</summary>
+                <p className='text-muted-foreground mt-2 whitespace-pre-wrap text-sm'>{recording.transcript}</p>
+              </details>
+            )}
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog
+        open={deleting !== null}
+        title='Delete this take?'
+        description='The video and its captions will be gone for good.'
+        confirm='Delete'
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          const target = deleting;
+          setDeleting(null);
+          if (target === null) return;
+          void client
+            .delete(`${RECORDINGS_KEY}/${target.id}`, target)
+            .then(onChanged)
+            .catch((error: unknown) =>
+              toast({
+                title: "Couldn't delete the take",
+                description: error instanceof Error ? error.message : undefined,
+                variant: 'destructive',
+              }),
+            );
+        }}
+      />
+    </>
+  );
+}

@@ -1,7 +1,7 @@
 {
   "name": "zephyreader",
   "version": "1.0.0",
-  "description": "OpenTeleprompt — a teleprompter built as a Zephyrex framework consumer.",
+  "description": "OpenTeleprompt \u2014 a teleprompter built as a Zephyrex framework consumer.",
   "author": "Jameson R Grieve",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -29,9 +29,11 @@
     "storybook": "storybook dev -p 6006",
     "storybook-build": "storybook build",
     "storybook-run": "npx http-server storybook-static -p 6006",
-    "storybook-test": "test-storybook --url http://localhost:6006"
+    "storybook-test": "test-storybook --url http://localhost:6006",
+    "fetch:voice-model": "node scripts/fetch-voice-model.mjs"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "@jgrieve/forms": "^0.0.1-alpha.1",
     "@prisma/adapter-better-sqlite3": "7.10.0",
     "@prisma/client": "^7.10.0",
@@ -43,7 +45,9 @@
     "fast-xml-parser": "^5.11.2",
     "jose": "^6.2.12",
     "lucide-react": "^1.48.0",
+    "mammoth": "^1.13.0",
     "next": "^16.3.7",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "swr": "^2.5.1",

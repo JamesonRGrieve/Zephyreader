@@ -17,6 +17,9 @@ export default defineConfig([
     'node_modules/**',
     // Build / generated output
     '.next/**',
+    // the e2e servers' build directories (playwright.config.ts NEXT_DIST_DIR)
+    '.next-*/**',
+    'public/models/**',
     'out/**',
     'build/**',
     'dist/**',

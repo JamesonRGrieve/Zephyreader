@@ -51,3 +51,6 @@ test.ipynb
 
 __pycache__
 yarn.lock
+
+# the on-device voice model (pnpm fetch:voice-model)
+/public/models/
