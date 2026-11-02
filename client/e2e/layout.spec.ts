@@ -3,12 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeScript } from './support/api';
 import { signedInPerson } from './support/people';
-
-/** Waits until the page shows its content rather than a loading state (a live stream never lets the network go idle). */
-async function settled(page: Page): Promise<void> {
-  await page.waitForLoadState('load');
-  await expect(page.getByText(/^(Loading|Opening|Getting the prompter ready|Connecting)/)).toHaveCount(0);
-}
+import { settled } from './support/settled';
 
 async function overflow(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -30,7 +25,7 @@ test('signed in, every page fits the screen @phone', async ({ browser }, testInf
     'A line with a very-long-unbroken-word-that-could-overflow-a-narrow-screen-if-the-layout-is-careless and more.',
   );
   for (const path of [
-    '/',
+    '/scripts',
     `/script/${script.id}`,
     `/present/${script.id}`,
     `/remote?script=${script.id}`,
