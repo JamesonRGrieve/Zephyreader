@@ -62,6 +62,8 @@ const PrompterSurface = forwardRef<HTMLDivElement, PrompterSurfaceProps>(functio
     lineHeight: settings.lineHeight,
     textAlign: settings.align,
     textTransform: settings.allCaps ? 'uppercase' : 'none',
+    // A word wider than the screen breaks rather than pushing the prompter sideways.
+    overflowWrap: 'anywhere',
     transform: mirrorTransform(settings),
   };
   return (

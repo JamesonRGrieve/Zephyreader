@@ -46,7 +46,7 @@ export default function SettingsPage() {
 
   return (
     <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full max-w-3xl px-4 py-8'>
+      <div className='mx-auto w-full min-w-0 max-w-3xl px-4 py-8'>
         <h1 className='mb-2 text-3xl font-bold'>Prompter settings</h1>
         <p className='text-muted-foreground mb-8'>
           How the prompter opens on every device you use. You can change them while presenting too.

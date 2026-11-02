@@ -18,7 +18,7 @@ export default function Home() {
 
   return (
     <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full max-w-6xl px-4 py-8'>
+      <div className='mx-auto w-full min-w-0 max-w-6xl px-4 py-8'>
         {signedIn ? (
           <>
             <h1 className='mb-6 text-3xl font-bold'>Your scripts</h1>

@@ -17,7 +17,7 @@ export default function ScriptPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full max-w-6xl px-4 py-6'>
+      <div className='mx-auto w-full min-w-0 max-w-6xl px-4 py-6'>
         <Link href='/' className='text-muted-foreground mb-4 inline-flex items-center gap-1 text-sm hover:underline'>
           <ArrowLeft className='h-4 w-4' aria-hidden /> Your scripts
         </Link>

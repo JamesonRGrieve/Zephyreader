@@ -13,7 +13,7 @@ export default function RecordingsPage() {
 
   return (
     <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full max-w-6xl px-4 py-8'>
+      <div className='mx-auto w-full min-w-0 max-w-6xl px-4 py-8'>
         <h1 className='mb-6 text-3xl font-bold'>Recordings</h1>
         {!capabilities.loaded ? null : !capabilities.plans ? (
           <p className='text-muted-foreground'>

@@ -44,7 +44,7 @@ function Remote() {
 export default function RemotePage() {
   return (
     <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full max-w-md px-4 py-6'>
+      <div className='mx-auto w-full min-w-0 max-w-md px-4 py-6'>
         <h1 className='mb-4 text-2xl font-bold'>Remote control</h1>
         <Suspense>
           <Remote />
