@@ -67,6 +67,11 @@ def store(server: TestClient) -> Path:
 @pytest.fixture(scope="module")
 def pro_user(server: TestClient) -> Any:
     """A user with an active subscription to the pro plan."""
+    return _subscriber(server)
+
+
+def _subscriber(server: TestClient) -> Any:
+    """A new user with an active subscription to the pro plan."""
     from zephyrex.extensions.payment.BLL_Payment import PaymentSubscriptionManager
 
     user = create_user(server)
@@ -81,6 +86,14 @@ def pro_user(server: TestClient) -> Any:
         refreshed_at=datetime.now(UTC),
     )
     return user
+
+
+def _teleprompter() -> Any:
+    """The extension's BLL module, as the server loaded it: it resolves only at runtime,
+    through the extensions namespace path, so mypy cannot follow it."""
+    import zephyrex.extensions.teleprompter.BLL_Teleprompter as bll  # type: ignore[import-not-found]
+
+    return bll
 
 
 def _registry(server: TestClient) -> Any:
@@ -234,10 +247,7 @@ class TestRecordings:
         unconfigured = server.post(f"{url}/captions", json={}, headers=_headers(pro_user))
         assert unconfigured.status_code == 503, unconfigured.text
 
-        # Resolves only at runtime, through the extensions namespace path.
-        from zephyrex.extensions.teleprompter.BLL_Teleprompter import RecordingManager  # type: ignore[import-not-found]
-
-        RecordingManager(requester_id=env("ROOT_ID"), model_registry=_registry(server)).keep(
+        _teleprompter().RecordingManager(requester_id=env("ROOT_ID"), model_registry=_registry(server)).keep(
             recording["id"],
             transcript="Good evening.",
             caption_segments=[{"start": 0.0, "end": 1.5, "text": "Good evening."}],
@@ -260,6 +270,42 @@ class TestRecordings:
             headers=_headers(pro_user),
         )
         assert refused.status_code == 415
+
+
+class TestAccountDeletion:
+    def test_deleting_an_account_erases_its_scripts_settings_and_recordings(
+        self, server: TestClient, other_user: Any, store: Path
+    ) -> None:
+        bll = _teleprompter()
+        leaving = _subscriber(server)
+        folder = _create(server, leaving, "script_folder", name="Talks").json()["script_folder"]
+        _create(server, leaving, "script", title="Mine", content="Hello.", script_folder_id=folder["id"])
+        _create(server, leaving, "prompter_preference", settings={"fontSize": 60})
+        recording = _create(server, leaving, "recording", title="Take", mime_type="video/webm")
+        stored = server.put(
+            f"/v1/recording/{recording.json()['recording']['id']}/content",
+            content=VIDEO,
+            headers=_headers(leaving, **{"Content-Type": "video/webm", "If-Match": recording.headers["ETag"]}),
+        ).json()["recording"]
+        assert (store / stored["storage_path"]).exists()
+        staying = _create(server, other_user, "script", title="Theirs", content="Hi.").json()["script"]
+
+        account = server.get("/v1/user", headers=_headers(leaving))
+        deleted = server.delete("/v1/user", headers=_headers(leaving, **{"If-Match": account.headers["ETag"]}))
+        assert deleted.status_code in (200, 204), deleted.text
+
+        assert not (store / stored["storage_path"]).exists()
+        registry = _registry(server)
+        for model in (bll.ScriptModel, bll.ScriptFolderModel, bll.PrompterPreferenceModel, bll.RecordingModel):
+            # Root sees deleted rows too: count only the ones still live.
+            db = model.DB(registry.DB.manager.Base)
+            live = db.list(
+                requester_id=env("ROOT_ID"),
+                model_registry=registry,
+                filters=[db.created_by_user_id == leaving.id, db.deleted_at.is_(None)],
+            )
+            assert not live, model.__name__
+        assert server.get(f"/v1/script/{staying['id']}", headers=_headers(other_user)).status_code == 200
 
 
 class TestAi:
@@ -292,7 +338,7 @@ def test_the_framework_routes_zephyreader_uses_are_mounted(server: TestClient, f
 
 def test_word_count_counts_spoken_words_only() -> None:
     """The library's word count matches the editor's: no cue notes, heading marks or markers."""
-    from zephyrex.extensions.teleprompter.BLL_Teleprompter import word_count  # type: ignore[import-not-found]
+    word_count = _teleprompter().word_count
 
     script = "# Opening\n\nGood evening [smile, pause] everyone.\n\nTonight we **launch** ==Zephyreader== - *today*."
     assert word_count(script) == 9

@@ -32,6 +32,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel as ResponseModel
 from pydantic import Field
 from zephyrex.extensions.entitlements.BLL_Entitlements import require_feature, require_within_limit
+from zephyrex.extensions.privacy.Erasure import register_eraser
 
 # Registers Zephyreader's plans. Resolves only at runtime, through the extensions namespace path.
 from zephyrex.extensions.teleprompter.Catalogue import (  # type: ignore[import-not-found]
@@ -44,6 +45,8 @@ from zephyrex.extensions.teleprompter.Catalogue import (  # type: ignore[import-
 )
 from zephyrex.lib.ContentNegotiation import skip_negotiation
 from zephyrex.lib.CustomRoute import ExposeIn, custom_route
+from zephyrex.lib.Environment import env
+from zephyrex.lib.Logging import logger
 from zephyrex.lib.Preconditions import etag_headers
 from zephyrex.logic.AbstractLogicManager import (
     AbstractBLLManager,
@@ -562,3 +565,38 @@ class TeleprompterManager(AbstractBLLManager[Any], RouterMixin):
             )
         heard = await _ai().transcribe(base64.b64encode(clip).decode(), f"clip.{_extension_for(mime_type)}", language)
         return Transcription(text=str(heard.get("text", "")))
+
+
+def erase_teleprompter(user_id: str, model_registry: Any) -> None:
+    """A deleted account's recordings go (their videos first), then its scripts, folders
+    and settings. Runs before the account itself goes, through the privacy extension's
+    eraser registry; safe to run twice."""
+    from zephyrex.extensions.ExternalErrors import PermanentExternalError
+    from zephyrex.logic.AbstractLogicManager.manager import _cache_sync_run
+
+    root = str(env("ROOT_ID"))
+    base = model_registry.DB.manager.Base
+    # Scripts before the folders they are filed in; recordings before nothing, but first.
+    for model in (RecordingModel, ScriptModel, ScriptFolderModel, PrompterPreferenceModel):
+        db = model.DB(base)
+        rows = (
+            db.list(
+                requester_id=root,
+                model_registry=model_registry,
+                filters=[db.created_by_user_id == user_id, db.deleted_at.is_(None)],
+                return_type="dto",
+                override_dto=model,
+            )
+            or []
+        )
+        for row in rows:
+            if model is RecordingModel and row.storage_path:
+                try:
+                    _cache_sync_run(_cloud().delete_file(row.storage_provider, row.storage_path), timeout=None)
+                except PermanentExternalError:
+                    # Already gone (a re-run after a partial erase): nothing left to delete.
+                    logger.warning("Erasing {}: {} was already gone", user_id, row.storage_path)
+            db.delete(requester_id=root, model_registry=model_registry, filters=[db.id == row.id])
+
+
+register_eraser("teleprompter", erase_teleprompter)

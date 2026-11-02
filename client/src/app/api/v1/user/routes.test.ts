@@ -6,7 +6,7 @@ import { issueSession } from '~/lib/auth/session';
 import { toUserDto, userEntityTag } from '~/lib/auth/userDto';
 import { prisma } from '~/lib/prisma';
 import { GET as getTeams } from '../team/route.lite';
-import { GET as getUser, PUT as putUser } from './route.lite';
+import { DELETE as deleteUser, GET as getUser, PUT as putUser } from './route.lite';
 
 const CSRF = 'csrf-value';
 
@@ -146,6 +146,50 @@ describe('PUT /api/v1/user preconditions', () => {
   it('accepts If-Match: *', async () => {
     const { token } = await signedIn();
     expect((await put(token, '*', 'Augusta')).status).toBe(200);
+  });
+});
+
+describe('DELETE /api/v1/user', () => {
+  const remove = (token: string, ifMatch?: string) =>
+    deleteUser(
+      request('/api/v1/user', {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}`, ...(ifMatch === undefined ? {} : { 'if-match': ifMatch }) },
+      }),
+    );
+
+  it('erases the account and everything it holds, and ends its sessions', async () => {
+    const { user, token, ifMatch } = await signedIn();
+    const other = await prisma.user.create({ data: { email: 'grace@example.com' } });
+    const updatedAt = new Date();
+    const folder = await prisma.scriptFolder.create({ data: { name: 'Talks', createdById: user.id, updatedAt } });
+    await prisma.script.create({ data: { title: 'Mine', createdById: user.id, scriptFolderId: folder.id, updatedAt } });
+    await prisma.prompterPreference.create({ data: { createdById: user.id, updatedAt } });
+    const theirs = await prisma.script.create({ data: { title: 'Theirs', createdById: other.id, updatedAt } });
+
+    const res = await remove(token, ifMatch);
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(res.cookies.get('zx_session')).toMatchObject({ value: '', maxAge: 0 });
+
+    expect(await prisma.user.findUnique({ where: { id: user.id } })).toBeNull();
+    expect(await prisma.script.count({ where: { createdById: user.id } })).toBe(0);
+    expect(await prisma.scriptFolder.count({ where: { createdById: user.id } })).toBe(0);
+    expect(await prisma.prompterPreference.count({ where: { createdById: user.id } })).toBe(0);
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(0);
+    expect(await prisma.script.findUnique({ where: { id: theirs.id } })).not.toBeNull();
+    expect((await getUser(request('/api/v1/user', { headers: { authorization: `Bearer ${token}` } }))).status).toBe(401);
+  });
+
+  it('428s without If-Match and 412s a stale one, erasing nothing', async () => {
+    const { user, token } = await signedIn();
+    const absent = await remove(token);
+    expect(absent.status).toBe(428);
+    await expect(absent.json()).resolves.toEqual({ detail: 'If-Match required' });
+    const stale = await remove(token, '"2000-01-01T00:00:00"');
+    expect(stale.status).toBe(412);
+    await expect(stale.json()).resolves.toMatchObject({ detail: expect.any(String), current: { id: user.id } });
+    expect(await prisma.user.findUnique({ where: { id: user.id } })).not.toBeNull();
   });
 });
 

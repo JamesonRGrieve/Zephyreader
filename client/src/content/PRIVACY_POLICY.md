@@ -75,12 +75,10 @@ Nothing is sold to anyone.
 
 Zephyreader uses only the cookies it needs to work:
 
-| Cookie             | What it's for                                      | How long it lasts               |
-| ------------------ | -------------------------------------------------- | ------------------------------- |
-| `zx_session`       | Keeps you signed in; scripts can't read it         | 24 hours, or until you sign out |
-| `zx_csrf`          | Protects your account from forged requests         | 24 hours, or until you sign out |
-| `zx_oauth_binding` | Ties a Google sign-in to the browser that began it | 10 minutes, or until you return |
-| `theme`            | Remembers light or dark mode                       | Until you clear it              |
+- **`zx_session`** keeps you signed in; scripts can't read it. It lasts 24 hours, or until you sign out.
+- **`zx_csrf`** protects your account from forged requests. It lasts 24 hours, or until you sign out.
+- **`zx_oauth_binding`** ties a Google sign-in to the browser that began it. It lasts 10 minutes, or until you return from Google.
+- **`theme`** remembers light or dark mode, until you clear it.
 
 Each browser tab also keeps a random name for itself in session storage, so your other devices can tell it apart, and the on-device speech model is kept in your browser's cache. Both stay on your device.
 
@@ -90,14 +88,21 @@ The server keeps error logs to diagnose problems. They record what went wrong, a
 
 ## How long we keep it
 
-Your account, scripts, settings, recordings and Google connection are kept until you delete them or ask for your account to be deleted. Deleting a recording deletes its video straight away. Deleting a script, folder or recording removes it from everything you see straight away; on the hosted service its record (a script's text, a recording's title and captions) is kept hidden, so a mistaken deletion can be undone on request, until your account is deleted. Deleting your account deletes everything listed under _What we store_, except the payment records the law requires to be kept for tax and accounting. You can stop Zephyreader using your Google account at any time, without deleting anything, by removing Zephyreader at [myaccount.google.com/permissions](https://myaccount.google.com/permissions). After that, the stored tokens no longer work.
+Your account, scripts, settings, recordings and Google connection are kept until you delete them or delete your account.
+
+- **Deleting a script, folder or recording** removes it from everything you see straight away, and a recording's video is deleted at once.
+- **Deleting your account**, on your account page, deletes it and everything listed under _What we store_ with it, including every recording's video, and signs you out. The only exception is the payment records the law requires to be kept for tax and accounting.
+- **On the hosted service**, a deleted record other than a video is hidden at once, so it can never be used or seen again, but stays in the database until the maintainer purges it. On a self-hosted copy it is gone at once.
+
+You can stop Zephyreader using your Google account at any time, without deleting anything, by removing Zephyreader at [myaccount.google.com/permissions](https://myaccount.google.com/permissions). After that, the stored tokens no longer work.
 
 ## Your choices
 
 - **See and correct** your details on the account page.
 - **Delete** any script, folder or recording yourself, at any time.
 - **Revoke Google access** at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
-- **Delete your account and its data** by asking, as described under Contact below. You can also ask for a copy of what's stored about you.
+- **Delete your account and its data** yourself, on your account page.
+- **Ask for a copy** of what's stored about you, as described under Contact below.
 
 ## Children
 
@@ -109,4 +114,4 @@ If this policy changes, the date at the top changes with it, and the previous ve
 
 ## Contact
 
-Questions and deletion or copy requests go to the maintainer through [the project's GitHub page](https://github.com/JamesonRGrieve/Zephyreader/issues). For a deletion request, open an issue saying you want your account deleted. Don't post your email address; you'll be contacted privately to confirm the account is yours.
+Questions and requests for a copy of your data go to the maintainer through [the project's GitHub page](https://github.com/JamesonRGrieve/Zephyreader/issues). Don't post your email address in an issue; you'll be contacted privately to confirm the account is yours.

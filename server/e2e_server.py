@@ -86,7 +86,7 @@ def seed(app: object) -> None:
     )
     instance("local_disk", "e2e-store", {"directory": os.environ["CLOUD_LOCAL_DIRECTORY"]})
 
-    pro = create_user(TestClient(app), email=PRO_EMAIL)  # type: ignore[arg-type]
+    pro = create_user(TestClient(app), email=PRO_EMAIL)  # type: ignore[arg-type,no-untyped-call]
     PaymentSubscriptionManager(model_registry=registry, requester_id=root).create(
         user_id=pro.id,
         provider="stripe",

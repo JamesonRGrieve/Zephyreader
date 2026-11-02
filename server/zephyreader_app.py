@@ -38,9 +38,10 @@ os.environ.setdefault("TRUSTED_PROXIES", "127.0.0.1/32,::1/128")
 # oauth_consumer for signing in with
 # Google (whose token also reads the user's Google Docs), cloud for those Docs and for storing
 # recordings, live_sync for one window driving the others and phone remotes, ai for the script
-# writer, captions and server speech recognition, payment for subscriptions and entitlements for
-# what a plan unlocks; teleprompter (this repo) adds what only a teleprompter needs.
-EXTENSIONS = "auth_session,auth_invitations,oauth_consumer,cloud,live_sync,ai,payment,entitlements,teleprompter"
+# writer, captions and server speech recognition, payment for subscriptions, entitlements for
+# what a plan unlocks and privacy for erasing what an account holds when it is deleted;
+# teleprompter (this repo) adds what only a teleprompter needs.
+EXTENSIONS = "auth_session,auth_invitations,oauth_consumer,cloud,live_sync,ai,payment,entitlements,privacy,teleprompter"
 EXTENSIONS_PATH = "./extensions"
 # ZEPHYREADER_SERVER_PORT moves it, e.g. for the end-to-end suite beside a dev server.
 SERVER_PORT = int(os.environ.get("ZEPHYREADER_SERVER_PORT", "6970"))
