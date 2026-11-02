@@ -52,6 +52,7 @@ export function capabilitiesOf(
 export function useCapabilities(): Capabilities {
   const extensions = useServerExtensions();
   const names = new Set((extensions.data ?? []).map((extension) => extension.name));
-  const entitlement = useEntitlement();
-  return capabilitiesOf(names, names.has('entitlements') ? entitlement.data : undefined, extensions.data !== undefined);
+  // Only a back end that sells plans is asked for one (lite never is).
+  const entitlement = useEntitlement({ enabled: names.has('entitlements') });
+  return capabilitiesOf(names, entitlement.data, extensions.data !== undefined);
 }
