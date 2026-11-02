@@ -8,9 +8,10 @@
  */
 import { randomBytes } from 'node:crypto';
 import type { NextResponse } from 'next/server';
+import { CSRF_COOKIE, SESSION_COOKIE } from '@zephyrex/auth/lib/session';
 
-export const SESSION_COOKIE = 'zx_session';
-export const CSRF_COOKIE = 'zx_csrf';
+// The names the browser client reads (and the framework server sets).
+export { CSRF_COOKIE, SESSION_COOKIE } from '@zephyrex/auth/lib/session';
 export const CSRF_HEADER = 'x-csrf-token';
 export const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
 /** Login tokens, and the session cookie that carries them, live this long (= JWT exp). */

@@ -21,7 +21,7 @@ test('free and lite: paid features are offered or absent, never broken', async (
   await openEditor(page);
   const actions = page.getByRole('complementary', { name: 'Script actions' });
   if (isSaas(testInfo.project.name)) {
-    await expect(actions.getByRole('note', { name: 'Upgrade' })).toContainText('The AI writer is part of a paid plan.');
+    await expect(actions.getByRole('note', { name: 'Upgrade' })).toContainText('A paid plan unlocks the AI writer.');
   } else {
     await expect(actions.getByRole('note', { name: 'Upgrade' })).toHaveCount(0);
   }
@@ -29,7 +29,7 @@ test('free and lite: paid features are offered or absent, never broken', async (
 
   await page.goto('/recordings');
   if (isSaas(testInfo.project.name)) {
-    await expect(page.getByRole('note', { name: 'Upgrade' })).toContainText('Cloud recordings is part of a paid plan.');
+    await expect(page.getByRole('note', { name: 'Upgrade' })).toContainText('A paid plan unlocks cloud recordings.');
   } else {
     await expect(page.getByText('there is no cloud library on this server')).toBeVisible();
   }

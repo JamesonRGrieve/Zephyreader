@@ -1,56 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { APP_DESCRIPTION, APP_NAME } from '~/zephyrex.config';
 
+/** The browser chrome around the page, in the theme's light and dark backgrounds (zephyrex.css --background). */
+const LIGHT_BACKGROUND = '#f1eff6';
+const DARK_BACKGROUND = '#0c0910';
+
+// The tab icon is app/icon.svg and the install manifest app/manifest.ts; Next links both.
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME,
-  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
-  manifest: '/manifest.json',
-  appleWebApp: {
-    title: process.env.NEXT_PUBLIC_APP_NAME,
-    statusBarStyle: 'black-translucent',
-    capable: true,
-    startupImage: [
-      {
-        url: '/apple-splash-2048-2732.jpg',
-        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)',
-      },
-      {
-        url: '/apple-splash-1668-2388.jpg',
-        media: '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)',
-      },
-      {
-        url: '/apple-splash-1290-2796.jpg',
-        media: '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)',
-      },
-    ],
-  },
-  icons: {
-    apple: [{ url: '/XTIcon_180.png', sizes: '180x180' }],
-    icon: [
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon.ico', sizes: 'any' },
-    ],
-    other: [
-      {
-        rel: 'mask-icon',
-        url: '/safari-pinned-tab.svg',
-        color: '#000000',
-      },
-    ],
-  },
-  applicationName: process.env.NEXT_PUBLIC_APP_NAME,
-  other: {
-    'mobile-web-app-capable': 'yes',
-  },
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  appleWebApp: { title: APP_NAME, statusBarStyle: 'black-translucent', capable: true },
 };
 
-export const viewport = {
-  minimumScale: 1,
-  initialScale: 1,
+// People can zoom: a prompter is read from a distance, and pinch-zoom is how many read small text.
+export const viewport: Viewport = {
   width: 'device-width',
-  shrinkToFit: 'no',
+  initialScale: 1,
   viewportFit: 'cover',
-  userScalable: false,
-  themeColor: 'var(--primary)',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: LIGHT_BACKGROUND },
+    { media: '(prefers-color-scheme: dark)', color: DARK_BACKGROUND },
+  ],
 };

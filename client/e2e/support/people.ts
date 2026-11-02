@@ -44,7 +44,7 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.getByLabel('Email').fill(email);
   await page.getByRole('button', { name: 'Continue' }).click();
   // Signing in lands on the library (zephyrex.config auth.home).
-  await page.waitForURL((url) => url.pathname === '/');
+  await page.waitForURL((url) => url.pathname === '/scripts');
   await expect(page.getByRole('heading', { name: 'Your scripts' })).toBeVisible();
 }
 

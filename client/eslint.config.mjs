@@ -25,9 +25,6 @@ export default defineConfig([
     'dist/**',
     'analyze/**',
     'next-env.d.ts',
-    // Generated PWA/service-worker assets under public/
-    'public/sw.js',
-    'public/workbox-*.js',
     // Test / coverage / Storybook artifacts
     'coverage/**',
     'storybook-static/**',

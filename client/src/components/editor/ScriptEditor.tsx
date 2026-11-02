@@ -204,7 +204,7 @@ export default function ScriptEditor({ script, capabilities, write, rewrite, rea
           placeholder={
             'Write your script here.\n\nUse [square brackets] for cue notes that never show on the prompter, and # headings for sections you can jump between.'
           }
-          className='min-h-[50vh] font-mono text-base leading-relaxed'
+          className='min-h-[50vh] font-mono text-base leading-relaxed md:min-h-[calc(100svh-17rem)]'
         />
       </div>
 

@@ -23,7 +23,6 @@ const STARTUP_MS = 300_000;
 
 const shared = {
   NEXT_TELEMETRY_DISABLED: '1',
-  APP_NAME: 'Zephyreader',
 };
 
 const lite = {

@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ZephyrexClientExtension, ZephyrexConfig } from 'zephyrex';
+import { ZephyreaderLogo } from './brand/ZephyreaderLogo';
+
+/** Where a signed-in person works: the script library. `/` is the landing page for visitors. */
+export const LIBRARY_PATH = '/scripts';
+
+/** The app's pages, which need a signed-in user (matched as path prefixes). */
+const APP_ROUTES = [LIBRARY_PATH, '/script/', '/present/', '/remote', '/recordings', '/settings'];
 
 /**
- * Zephyreader's pages: the script library (`/`), the editor (`/script/[id]`), the
+ * Zephyreader's pages: the script library (`/scripts`), the editor (`/script/[id]`), the
  * prompter (`/present/[id]`), the phone remote, recordings and prompter settings. The
  * extension only contributes their navigation; the pages live under src/app.
  *
- * The config is imported by the (server) root layout and passed as a prop to
- * the client `ZephyrexApp`, so every value here must be serializable — no
- * component/function values (e.g. nav `icon`s).
+ * The config is imported on the client (app/Providers.tsx) and by the server's
+ * middleware, so it may carry components (the logo).
  */
 const teleprompterExtension: ZephyrexClientExtension = {
   name: 'teleprompter',
   displayName: 'Teleprompter',
   description: 'Write, import and present scripts on a teleprompter that follows your voice.',
   navItems: [
-    { title: 'Scripts', url: '/' },
+    { title: 'Scripts', url: LIBRARY_PATH },
     { title: 'Remote control', url: '/remote' },
     { title: 'Recordings', url: '/recordings' },
     { title: 'Prompter settings', url: '/settings' },
@@ -23,6 +29,9 @@ const teleprompterExtension: ZephyrexClientExtension = {
 };
 
 const DEFAULT_PORT = 6969;
+
+export const APP_NAME = 'Zephyreader';
+export const APP_DESCRIPTION = 'A teleprompter that follows your voice, on every screen you own.';
 
 const config: ZephyrexConfig = {
   server: {
@@ -35,8 +44,9 @@ const config: ZephyrexConfig = {
     upstreamUrl: process.env.API_UPSTREAM_URL || `http://127.0.0.1:${process.env.PORT || DEFAULT_PORT}/api`,
   },
   app: {
-    name: process.env.NEXT_PUBLIC_APP_NAME ?? 'Open Teleprompt',
-    description: process.env.NEXT_PUBLIC_APP_DESCRIPTION ?? 'An open source teleprompting software.',
+    name: APP_NAME,
+    description: APP_DESCRIPTION,
+    logo: ZephyreaderLogo,
     defaultTheme: (process.env.NEXT_PUBLIC_THEME_DEFAULT_MODE as 'dark' | 'light') ?? 'dark',
     // Never send a signed-in user's email hash to Gravatar: no request leaves for a third party.
     gravatar: false,
@@ -44,12 +54,13 @@ const config: ZephyrexConfig = {
   auth: {
     authPath: '/user',
     // Signing in lands on the script library, not the account page.
-    home: '/',
+    home: LIBRARY_PATH,
     // Google is the only sign-in: no password accounts, and no magic-link extension
     // (@zephyrex/auth-magic-link) is registered, so magic links stay off too.
     authModes: { basic: false },
     oauthProviders: ['google'],
-    privateRoutes: (process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean),
+    // The app's pages, and any more the deployment names.
+    privateRoutes: [...APP_ROUTES, ...(process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean)],
   },
   // The sidebar lists only what the app declares: the framework pages it mounts.
   navItems: [

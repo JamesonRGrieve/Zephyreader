@@ -1,6 +1,6 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { FilePlus2, FileUp, Folder as FolderIcon, FolderPlus, MoreHorizontal, Play, Star, StarOff } from 'lucide-react';
+import { FilePlus2, FileUp, Folder as FolderIcon, FolderPlus, MoreHorizontal, Play, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -121,29 +121,32 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
               {googleDrive && <DropdownMenuItem onSelect={props.onImportDrive}>From Google Docs</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Input
-            type='search'
-            placeholder='Search scripts'
-            aria-label='Search scripts'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className='min-w-0 flex-1 sm:max-w-xs'
-          />
-          <Select
-            value={sort}
-            onValueChange={(value) => setSort(SORTS.find((candidate) => candidate === value) ?? 'recent')}
-          >
-            <SelectTrigger className='w-44' aria-label='Sort scripts'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORTS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {SORT_LABELS[option]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Searching and sorting share a row: their own on a phone, beside the buttons when there is room. */}
+          <div className='flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1'>
+            <Input
+              type='search'
+              placeholder='Search scripts'
+              aria-label='Search scripts'
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className='min-w-0 flex-1 sm:max-w-xs'
+            />
+            <Select
+              value={sort}
+              onValueChange={(value) => setSort(SORTS.find((candidate) => candidate === value) ?? 'recent')}
+            >
+              <SelectTrigger className='w-44 shrink-0' aria-label='Sort scripts'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORTS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {SORT_LABELS[option]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {shown.length === 0 ? (
@@ -164,7 +167,7 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
                   {script.starred ? (
                     <Star className='text-primary h-5 w-5 fill-current' aria-hidden />
                   ) : (
-                    <StarOff className='text-muted-foreground h-5 w-5' aria-hidden />
+                    <Star className='text-muted-foreground h-5 w-5' aria-hidden />
                   )}
                 </button>
                 <Link href={`/script/${script.id}`} className='min-w-0 flex-1'>

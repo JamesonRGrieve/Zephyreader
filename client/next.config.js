@@ -31,8 +31,6 @@ const nextConfig = {
   // `route.lite.ts` is a route only in the lite build; the SaaS build never sees it.
   pageExtensions: IS_LITE ? ['lite.ts', ...DEFAULT_PAGE_EXTENSIONS] : DEFAULT_PAGE_EXTENSIONS,
   env: {
-    NEXT_PUBLIC_APP_NAME: process.env.APP_NAME || 'Open Teleprompt',
-    NEXT_PUBLIC_APP_DESCRIPTION: process.env.APP_DESCRIPTION || 'An open source teleprompting software.',
     NEXT_PUBLIC_ZEPHYREADER_VARIANT: VARIANT,
     APP_URI,
     NEXT_PUBLIC_THEME_DEFAULT_MODE: process.env.DEFAULT_THEME_MODE || 'dark',

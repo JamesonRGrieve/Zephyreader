@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { SidebarInset } from 'zephyrex/ui/sidebar';
+import { AppPage } from '~/components/common/AppPage';
 import RemoteControl from '~/components/remote/RemoteControl';
 import { useCapabilities } from '~/features/capabilities';
 import { useScripts } from '~/features/data/records';
@@ -43,13 +43,11 @@ function Remote() {
 
 export default function RemotePage() {
   return (
-    <SidebarInset className='min-h-svh'>
-      <div className='mx-auto w-full min-w-0 max-w-md px-4 py-6'>
-        <h1 className='mb-4 text-2xl font-bold'>Remote control</h1>
-        <Suspense>
-          <Remote />
-        </Suspense>
-      </div>
-    </SidebarInset>
+    <AppPage title='Remote control' width='narrow'>
+      <h1 className='mb-4 text-2xl font-bold'>Remote control</h1>
+      <Suspense>
+        <Remote />
+      </Suspense>
+    </AppPage>
   );
 }
