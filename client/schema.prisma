@@ -71,3 +71,46 @@ model OAuthState {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 }
+
+// Teleprompter records: the same resources, fields and rules as the SaaS server's
+// teleprompter extension (server/extensions/teleprompter), owned by their creator.
+
+model ScriptFolder {
+  id          String   @id @default(uuid())
+  createdById String
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  updatedById String?
+  scripts     Script[]
+
+  @@index([createdById])
+}
+
+model Script {
+  id             String        @id @default(uuid())
+  createdById    String
+  scriptFolderId String?
+  title          String
+  content        String        @default("")
+  starred        Boolean       @default(false)
+  wordCount      Int           @default(0)
+  sourceProvider String?
+  sourcePath     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
+  updatedById    String?
+  scriptFolder   ScriptFolder? @relation(fields: [scriptFolderId], references: [id], onDelete: SetNull)
+
+  @@index([createdById])
+}
+
+/// One per user: the display and scroll settings the prompter opens with.
+model PrompterPreference {
+  id          String   @id @default(uuid())
+  createdById String   @unique
+  settings    String   @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  updatedById String?
+}

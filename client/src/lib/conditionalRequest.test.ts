@@ -54,12 +54,15 @@ describe('evaluateIfMatch', () => {
     expect(evaluateIfMatch(`"stale", ${entityTag(VALIDATOR)}`, VALIDATOR)).toBe('match');
   });
 
-  it('never matches a weak tag under strong comparison', () => {
-    expect(evaluateIfMatch(`W/${entityTag(VALIDATOR)}`, VALIDATOR)).toBe('mismatch');
+  // server-framework parity (zephyrex.lib.Preconditions.IfMatch): the version is opaque.
+  it('ignores the W/ prefix a compressing proxy may add', () => {
+    expect(evaluateIfMatch(`W/${entityTag(VALIDATOR)}`, VALIDATOR)).toBe('match');
+    expect(evaluateIfMatch('W/"stale"', VALIDATOR)).toBe('mismatch');
   });
 
-  it('treats an unquoted or malformed header as a mismatch', () => {
-    expect(evaluateIfMatch(VALIDATOR, VALIDATOR)).toBe('mismatch');
-    expect(evaluateIfMatch(`${entityTag(VALIDATOR)} junk`, VALIDATOR)).toBe('mismatch');
+  it('accepts a bare version copied from a row, and reads the tags out of a messy header', () => {
+    expect(evaluateIfMatch(VALIDATOR, VALIDATOR)).toBe('match');
+    expect(evaluateIfMatch(`${entityTag(VALIDATOR)} junk`, VALIDATOR)).toBe('match');
+    expect(evaluateIfMatch('junk', VALIDATOR)).toBe('mismatch');
   });
 });

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { User } from '@prisma/client';
 import { entityTag } from '~/lib/conditionalRequest';
+import { frameworkTimestamp } from '~/lib/records';
 
 export type UserDto = ReturnType<typeof toUserDto>;
 
@@ -8,9 +9,9 @@ export type UserDto = ReturnType<typeof toUserDto>;
 export function toUserDto(user: User) {
   return {
     id: user.id,
-    created_at: user.createdAt.toISOString(),
+    created_at: frameworkTimestamp(user.createdAt),
     created_by_user_id: null,
-    updated_at: user.updatedAt.toISOString(),
+    updated_at: frameworkTimestamp(user.updatedAt),
     updated_by_user_id: null,
     image_url: user.imageUrl,
     email: user.email,

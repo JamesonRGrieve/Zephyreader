@@ -104,7 +104,7 @@ class TestScripts:
     def test_create_list_update_with_word_count_and_stale_saves(self, server: TestClient, free_user: Any) -> None:
         created = _create(server, free_user, "script", title="Keynote", content="Good evening [smile] everyone")
         script = created.json()["script"]
-        assert script["word_count"] == 4
+        assert script["word_count"] == 3  # cue notes are not spoken
         assert created.headers["ETag"]
 
         listed = server.get("/v1/script", headers=_headers(free_user)).json()["scripts"]
@@ -288,3 +288,13 @@ def test_the_framework_routes_zephyreader_uses_are_mounted(server: TestClient, f
     plans = server.get("/v1/entitlement", headers=_headers(free_user))
     assert plans.status_code == 200, plans.text
     assert plans.json()["plan"] == "free"
+
+
+def test_word_count_counts_spoken_words_only() -> None:
+    """The library's word count matches the editor's: no cue notes, heading marks or markers."""
+    from zephyrex.extensions.teleprompter.BLL_Teleprompter import word_count  # type: ignore[import-not-found]
+
+    script = "# Opening\n\nGood evening [smile, pause] everyone.\n\nTonight we **launch** ==Zephyreader== - *today*."
+    assert word_count(script) == 9
+    assert word_count("") == 0
+    assert word_count(None) == 0

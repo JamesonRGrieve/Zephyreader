@@ -24,6 +24,7 @@ Actions on ``/v1/teleprompter``:
 import base64
 import json
 import math
+import re
 from typing import Any, ClassVar, Literal
 
 from fastapi import HTTPException, Request
@@ -100,8 +101,18 @@ AI_INSTRUCTIONS: dict[str, str] = {
 }
 
 
+CUE_NOTE = re.compile(r"\[[^\]\n]*\]")
+HEADING_MARK = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+EMPHASIS_MARK = re.compile(r"\*\*|==|[*_]")
+SPOKEN = re.compile(r"[^\W_]")
+
+
 def word_count(text: str | None) -> int:
-    return len((text or "").split())
+    """Spoken words: cue notes, heading marks and emphasis markers left out, and only
+    tokens with a letter or digit counted (the client counts the same way:
+    client/src/features/prompter/script.ts spokenWordCount)."""
+    plain = EMPHASIS_MARK.sub("", HEADING_MARK.sub(" ", CUE_NOTE.sub(" ", text or "")))
+    return sum(1 for token in plain.split() if SPOKEN.search(token))
 
 
 def _user_id(manager: AbstractBLLManager[Any]) -> str:

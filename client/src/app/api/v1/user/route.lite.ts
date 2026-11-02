@@ -16,7 +16,7 @@ function userResponse(user: UserDto): NextResponse {
 /** 412 with the row as it now stands, which the client's conflict view diffs against. */
 function preconditionFailed(current: UserDto): NextResponse {
   return NextResponse.json(
-    { detail: 'Precondition Failed — entity has been modified', current },
+    { detail: 'The record was changed since it was read', current },
     { status: 412, headers: { ETag: userEntityTag(current) } },
   );
 }

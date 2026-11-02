@@ -44,6 +44,10 @@ EXTENSIONS = "auth_session,auth_invitations,oauth_consumer,cloud,live_sync,ai,pa
 EXTENSIONS_PATH = "./extensions"
 # ZEPHYREADER_SERVER_PORT moves it, e.g. for the end-to-end suite beside a dev server.
 SERVER_PORT = int(os.environ.get("ZEPHYREADER_SERVER_PORT", "6970"))
+# The client proxies its same-origin /api/v1/* to this server's /v1/* (client/next.config.js,
+# server.baseUrl '/api'), stripping the prefix: the ASGI root path, so cookies the server
+# scopes to a path (oauth_consumer's sign-in binding cookie) carry the path browsers call.
+API_ROOT_PATH = "/api"
 
 
 def create() -> FastAPI:
@@ -60,4 +64,4 @@ def create() -> FastAPI:
 if __name__ == "__main__":
     from zephyrex import run
 
-    run(extensions=EXTENSIONS, extensions_path=EXTENSIONS_PATH, port=SERVER_PORT)
+    run(extensions=EXTENSIONS, extensions_path=EXTENSIONS_PATH, port=SERVER_PORT, root_path=API_ROOT_PATH)

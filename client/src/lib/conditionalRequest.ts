@@ -2,12 +2,16 @@
 /**
  * Optimistic-concurrency preconditions (RFC 9110 §13.1.1), in parity with
  * server-framework's stale-save contract: a row's entity tag is its serialised
- * `updated_at`, quoted, strong and opaque, and an unsafe write that names a stale
+ * `updated_at`, quoted and opaque, and an unsafe write that names a stale
  * tag in `If-Match` is refused with 412 rather than overwriting a newer edit.
  */
 
-/** RFC 9110 entity-tag: optional weak prefix, then a quoted run of etagc. */
-const ENTITY_TAG = /^\s*(W\/)?"([\x21\x23-\x7E\x80-\xFF]*)"\s*(?:,|$)/;
+/**
+ * An entity-tag's opaque value, as server-framework reads it (zephyrex.lib.Preconditions):
+ * the `W/` prefix a compressing proxy may add and the quotes are not part of the version.
+ */
+const ENTITY_TAG = /(?:W\/)?"([^"]*)"/g;
+const ANY_VERSION = '*';
 
 export type IfMatchResult = 'absent' | 'match' | 'mismatch';
 
@@ -25,19 +29,16 @@ export function entityTag(validator: string): string {
 }
 
 /**
- * Evaluates `If-Match` against the current validator using strong comparison:
- * `*` matches any current representation, a weak tag never matches, and a
- * malformed header matches nothing.
+ * Evaluates `If-Match` against the current validator, in parity with server-framework:
+ * `*` matches any current representation; otherwise the header names a set of versions
+ * (every quoted tag, `W/` ignored, or the bare value when it holds none) and matches
+ * when the current one is among them.
  */
 export function evaluateIfMatch(header: string | null, currentValidator: string): IfMatchResult {
-  if (header === null || header.trim() === '') return 'absent';
-  if (header.trim() === '*') return 'match';
-  let rest = header;
-  while (rest.trim() !== '') {
-    const tag = ENTITY_TAG.exec(rest);
-    if (tag === null) return 'mismatch';
-    if (tag[1] === undefined && tag[2] === currentValidator) return 'match';
-    rest = rest.slice(tag[0].length);
-  }
-  return 'mismatch';
+  const value = header?.trim() ?? '';
+  if (value === '') return 'absent';
+  if (value === ANY_VERSION) return 'match';
+  const tagged = [...value.matchAll(ENTITY_TAG)].map((match) => match[1]);
+  const versions = tagged.length > 0 ? tagged : [value];
+  return versions.includes(currentValidator) ? 'match' : 'mismatch';
 }

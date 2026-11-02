@@ -64,22 +64,67 @@ interface TokenEndpointResponse {
   scope?: unknown;
 }
 
+const GOOGLE_ISSUER = 'https://accounts.google.com';
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
-let googleJwks: JWTVerifyGetKey | null = null;
+const GOOGLE_SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.readonly';
+const DISCOVERY_PATH = '/.well-known/openid-configuration';
+const DISCOVERY_TIMEOUT_MS = 10_000;
 
-/** Google as an OIDC provider; the Drive read scope lets the app list and export Docs. */
-export function googleProvider(): OidcProvider {
-  googleJwks ??= createRemoteJWKSet(new URL(GOOGLE_JWKS_URL));
+interface Endpoints {
+  authorizeUrl: string;
+  tokenUrl: string;
+  jwks: JWTVerifyGetKey;
+}
+
+let googleEndpoints: Promise<Endpoints> | null = null;
+
+/** An OpenID issuer's endpoints, read from its discovery document. */
+async function discover(issuer: string): Promise<Endpoints> {
+  const response = await fetch(`${issuer.replace(/\/$/, '')}${DISCOVERY_PATH}`, {
+    signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new ApiError(502, 'The sign-in provider could not be reached');
+  const body: unknown = await response.json();
+  const field = (name: string): string => {
+    const value: unknown = typeof body === 'object' && body !== null ? Reflect.get(body, name) : undefined;
+    if (typeof value !== 'string') throw new ApiError(502, 'The sign-in provider sent an invalid discovery document');
+    return value;
+  };
+  return {
+    authorizeUrl: field('authorization_endpoint'),
+    tokenUrl: field('token_endpoint'),
+    jwks: createRemoteJWKSet(new URL(field('jwks_uri'))),
+  };
+}
+
+/**
+ * Google as an OIDC provider; the Drive read scope lets the app list and export Docs.
+ * `GOOGLE_ISSUER` names another OpenID issuer to stand in for Google (as the framework's
+ * Google provider's `issuer` setting does), whose endpoints are discovered; the default is
+ * Google itself, at its published endpoints.
+ */
+export async function googleProvider(): Promise<OidcProvider> {
+  const issuer = process.env.GOOGLE_ISSUER || GOOGLE_ISSUER;
+  googleEndpoints ??=
+    issuer === GOOGLE_ISSUER
+      ? Promise.resolve({
+          authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+          tokenUrl: 'https://oauth2.googleapis.com/token',
+          jwks: createRemoteJWKSet(new URL(GOOGLE_JWKS_URL)),
+        })
+      : discover(issuer);
+  const endpoints = await googleEndpoints.catch((error: unknown) => {
+    googleEndpoints = null;
+    throw error;
+  });
   return {
     name: 'google',
     clientId: requireEnv('GOOGLE_CLIENT_ID'),
     clientSecret: requireEnv('GOOGLE_CLIENT_SECRET'),
-    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
+    ...endpoints,
     // Google issues either form of its issuer identifier.
-    issuers: ['https://accounts.google.com', 'accounts.google.com'],
-    jwks: googleJwks,
-    scopes: 'openid email profile https://www.googleapis.com/auth/drive.readonly',
+    issuers: issuer === GOOGLE_ISSUER ? [GOOGLE_ISSUER, 'accounts.google.com'] : [issuer],
+    scopes: GOOGLE_SCOPES,
     // Offline access with consent yields a refresh token for Drive calls.
     extraAuthorizeParams: { access_type: 'offline', prompt: 'consent' },
   };
@@ -117,12 +162,12 @@ export async function requestTokens(provider: OidcProvider, grant: Record<string
 
 export class OAuthLogin {
   constructor(
-    private readonly providers: Record<string, () => OidcProvider>,
+    private readonly providers: Record<string, () => OidcProvider | Promise<OidcProvider>>,
     private readonly allowedRedirectUris: () => string[],
     private readonly allowSignup: () => boolean,
   ) {}
 
-  private provider(name: string): OidcProvider {
+  private async provider(name: string): Promise<OidcProvider> {
     const factory = Object.hasOwn(this.providers, name) ? this.providers[name] : undefined;
     if (!factory) throw new ApiError(400, `Unknown OAuth provider: ${name}`);
     return factory();
@@ -141,7 +186,7 @@ export class OAuthLogin {
     providerName: string,
     requestedRedirectUri?: string,
   ): Promise<{ authorizeUrl: string; state: string; binding: string }> {
-    const provider = this.provider(providerName);
+    const provider = await this.provider(providerName);
     const redirectUri = this.redirectUri(provider.name, requestedRedirectUri);
     const state = randomToken();
     const binding = randomToken();
@@ -183,7 +228,7 @@ export class OAuthLogin {
     binding: string | undefined;
     redirectUri?: string;
   }): Promise<IssuedSession> {
-    const provider = this.provider(input.provider);
+    const provider = await this.provider(input.provider);
     const redirectUri = this.redirectUri(provider.name, input.redirectUri);
     const pending = await this.consumeState(input.state);
     const valid =
