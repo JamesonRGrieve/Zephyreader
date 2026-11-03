@@ -20,6 +20,11 @@ const SERVER_URI = process.env.ZEPHYREADER_SERVER_URI || 'http://127.0.0.1:6970'
 
 const DEFAULT_PAGE_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
 
+// The largest body the SaaS server takes on any route: a recording's video (server/
+// extensions/teleprompter MAX_RECORDING_BYTES, 100 MB). Next buffers a proxied body and keeps
+// only its first 10 MB unless told more; the server holds every other route to 10 MB itself.
+const SAAS_MAX_BODY = '100mb';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Keep file tracing scoped to this app; the surrounding directory is not a workspace.
@@ -30,6 +35,7 @@ const nextConfig = {
   ...(process.env.NEXT_OUTPUT_STANDALONE ? { output: 'standalone' } : {}),
   // `route.lite.ts` is a route only in the lite build; the SaaS build never sees it.
   pageExtensions: IS_LITE ? ['lite.ts', ...DEFAULT_PAGE_EXTENSIONS] : DEFAULT_PAGE_EXTENSIONS,
+  ...(IS_LITE ? {} : { experimental: { proxyClientMaxBodySize: SAAS_MAX_BODY } }),
   env: {
     NEXT_PUBLIC_ZEPHYREADER_VARIANT: VARIANT,
     APP_URI,

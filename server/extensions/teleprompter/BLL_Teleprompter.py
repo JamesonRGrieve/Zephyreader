@@ -48,6 +48,7 @@ from zephyrex.lib.CustomRoute import ExposeIn, custom_route
 from zephyrex.lib.Environment import env
 from zephyrex.lib.Logging import logger
 from zephyrex.lib.Preconditions import etag_headers
+from zephyrex.lib.RequestBody import capped_body
 from zephyrex.logic.AbstractLogicManager import (
     AbstractBLLManager,
     ApplicationModel,
@@ -74,6 +75,7 @@ MAX_CAPTION_AUDIO_BYTES = 25 * 1024 * 1024
 MAX_CLIP_BYTES = 2 * 1024 * 1024
 MAX_AI_CHARACTERS = 50_000
 BYTES_PER_MEGABYTE = 1024 * 1024
+CLIP_SIZE_RULE = f"A clip is 1 byte to {MAX_CLIP_BYTES // BYTES_PER_MEGABYTE} MB"
 RECORDING_MIME_TYPES = ("video/webm", "video/mp4", "audio/webm", "audio/ogg", "audio/mp4")
 CLIP_MIME_TYPES = ("audio/webm", "audio/ogg", "audio/wav", "audio/mp4", "audio/mpeg")
 RECORDINGS_FOLDER = "recordings"
@@ -381,18 +383,17 @@ class RecordingManager(AbstractBLLManager[RecordingModel], RouterMixin):
         openapi_tags=("Recording",),
         summary="Store the take's video (the request body, of the recording's type)",
         raw_body=True,
+        # A take is larger than the framework's global body cap: this route alone takes up to its own.
+        max_body_bytes=MAX_RECORDING_BYTES,
     )
     async def content_put_route(self, request: Request, response: Response, id: str) -> RecordingStored:
         require_feature(_user_id(self), self.model_registry, CLOUD_RECORDINGS)
         recording = self._mine(id)
-        content = await request.body()
+        content = await capped_body(
+            request, MAX_RECORDING_BYTES, f"A take may be at most {MAX_RECORDING_BYTES // BYTES_PER_MEGABYTE} MB"
+        )
         if not content:
             raise HTTPException(status_code=422, detail="The video is empty")
-        if len(content) > MAX_RECORDING_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail=f"A take may be at most {MAX_RECORDING_BYTES // BYTES_PER_MEGABYTE} MB",
-            )
         total = self._stored_bytes(excluding=id) + len(content)
         require_within_limit(
             _user_id(self), self.model_registry, RECORDING_MEGABYTES, math.ceil(total / BYTES_PER_MEGABYTE)
@@ -558,11 +559,9 @@ class TeleprompterManager(AbstractBLLManager[Any], RouterMixin):
         mime_type = request.headers.get("content-type", "").split(";", 1)[0]
         if mime_type not in CLIP_MIME_TYPES:
             raise HTTPException(status_code=415, detail=f"A clip is one of {', '.join(CLIP_MIME_TYPES)}")
-        clip = await request.body()
-        if not clip or len(clip) > MAX_CLIP_BYTES:
-            raise HTTPException(
-                status_code=413, detail=f"A clip is 1 byte to {MAX_CLIP_BYTES // BYTES_PER_MEGABYTE} MB"
-            )
+        clip = await capped_body(request, MAX_CLIP_BYTES, CLIP_SIZE_RULE)
+        if not clip:
+            raise HTTPException(status_code=413, detail=CLIP_SIZE_RULE)
         heard = await _ai().transcribe(base64.b64encode(clip).decode(), f"clip.{_extension_for(mime_type)}", language)
         return Transcription(text=str(heard.get("text", "")))
 

@@ -43,14 +43,16 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
 
   if (recordings.length === 0) {
     return (
-      <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
-        No recordings yet. Record a take from the prompter.
-      </p>
+      <section aria-label='Your recordings'>
+        <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
+          No recordings yet. Record a take from the prompter.
+        </p>
+      </section>
     );
   }
 
   return (
-    <>
+    <section aria-label='Your recordings'>
       <ul className='grid gap-4 sm:grid-cols-2'>
         {recordings.map((recording) => (
           <li key={recording.id} className='flex flex-col gap-3 rounded-lg border p-4'>
@@ -149,6 +151,6 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
             );
         }}
       />
-    </>
+    </section>
   );
 }

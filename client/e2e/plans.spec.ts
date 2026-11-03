@@ -46,7 +46,9 @@ test('a pro subscriber has the AI writer and the recordings library', async ({ b
   await writer.getByRole('button', { name: 'Shorten the script' }).click();
   await expect(writer.getByRole('alert')).toBeVisible();
 
+  // The library itself, not the upgrade prompt (other tests may have stored this subscriber's takes).
   await page.goto('/recordings');
-  await expect(page.getByText('No recordings yet')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your recordings' })).toBeVisible();
+  await expect(page.getByRole('note', { name: 'Upgrade' })).toHaveCount(0);
   await context.close();
 });

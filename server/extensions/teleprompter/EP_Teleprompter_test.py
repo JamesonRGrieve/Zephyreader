@@ -263,6 +263,19 @@ class TestRecordings:
         assert not (store / stored["storage_path"]).exists()
         assert server.get(url, headers=_headers(pro_user)).status_code == 404
 
+    def test_a_take_longer_than_a_minute_is_stored(self, server: TestClient, pro_user: Any, store: Path) -> None:
+        """A real take (12 MB: about a minute of 720p) passes every layer up to the extension's
+        own cap, MAX_RECORDING_BYTES, not just the small clips the other tests send."""
+        created = _create(server, pro_user, "recording", title="Long take", mime_type="video/webm")
+        take = VIDEO + secrets.token_bytes(12 * 1024 * 1024)
+        put = server.put(
+            f"/v1/recording/{created.json()['recording']['id']}/content",
+            content=take,
+            headers=_headers(pro_user, **{"Content-Type": "video/webm", "If-Match": created.headers["ETag"]}),
+        )
+        assert put.status_code == 200, put.text
+        assert put.json()["recording"]["size_bytes"] == len(take)
+
     def test_an_unsupported_video_type_is_refused(self, server: TestClient, pro_user: Any) -> None:
         refused = server.post(
             "/v1/recording",
