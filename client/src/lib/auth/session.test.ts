@@ -36,6 +36,19 @@ describe('issueSession', () => {
   });
 });
 
+describe('the signing secret', () => {
+  it('is refused under 32 characters, as server-framework refuses it', async () => {
+    const strong = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = 'short-secret';
+    try {
+      const user = await prisma.user.create({ data: { email: 'weak@example.com' } });
+      await expect(issueSession(user, 'oauth_consumer')).rejects.toThrow('JWT_SECRET must be at least 32 characters');
+    } finally {
+      process.env.JWT_SECRET = strong;
+    }
+  });
+});
+
 describe('authenticate', () => {
   it('resolves a Bearer token to its user', async () => {
     const { user, session } = await signedIn();

@@ -30,8 +30,20 @@ export interface IssuedSession {
   token: string;
 }
 
+/** The shortest JWT_SECRET accepted, as server-framework requires it (Environment C-3). */
+const MIN_SECRET_LENGTH = 32;
+
+/**
+ * The HS256 key every session token is signed and checked with. A short secret could be
+ * brute-forced offline from any token, so it is refused outright: a self-hosted copy has no
+ * "production" setting to switch the check on.
+ */
 function signingKey(): Uint8Array {
-  return new TextEncoder().encode(requireEnv('JWT_SECRET'));
+  const secret = requireEnv('JWT_SECRET').trim();
+  if (secret.length < MIN_SECRET_LENGTH) {
+    throw new Error(`JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters (got ${secret.length})`);
+  }
+  return new TextEncoder().encode(secret);
 }
 
 export async function issueSession(
