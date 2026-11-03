@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { existsSync } from 'node:fs';
 import path from 'path';
 import type { StorybookConfig } from '@storybook/nextjs';
 
 const APP_SRC = path.resolve(import.meta.dirname, '../src');
+// public/ holds only what is fetched into it (the voice model), so it may not exist.
+const PUBLIC = path.resolve(import.meta.dirname, '../public');
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx|mdx)'],
@@ -13,7 +16,7 @@ const config: StorybookConfig = {
     name: '@storybook/nextjs',
     options: {},
   },
-  staticDirs: ['../public'],
+  staticDirs: existsSync(PUBLIC) ? ['../public'] : [],
   core: {
     disableTelemetry: true,
   },
