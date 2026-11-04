@@ -27,13 +27,15 @@ pnpm dev                          # http://localhost:6969
 
 ## Container
 
-`Containerfile` builds an OCI image with Podman. The four sibling packages go in
-as named build contexts and are compiled inside the image; the header of the file
-has the full build and run commands.
+`client/Containerfile` builds an OCI image with Podman, from `client/`. The four
+sibling packages and the repository's `contract/` (the knowledge the app shares with
+the SaaS server) go in as named build contexts; the packages are compiled inside the
+image. The header of the file has the full build and run commands.
 
 ```sh
-CONTEXTS="--build-context zod2gql=../zod2gql --build-context dynamic-form=../dynamic-form \
-  --build-context auth=../auth --build-context client-framework=../client-framework"
+CONTEXTS="--build-context zod2gql=../../zod2gql --build-context dynamic-form=../../dynamic-form \
+  --build-context auth=../../auth --build-context client-framework=../../client-framework \
+  --build-context contract=../contract"
 podman build -t zephyreader $CONTEXTS .
 podman build --target migrate -t zephyreader-migrate $CONTEXTS .
 ```

@@ -6,10 +6,11 @@ recording stored, read back and deleted with its video, captions served once a
 take is transcribed, clear refusals when no AI is configured, and one user's
 scripts invisible to another."""
 
+import json
 import secrets
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,8 @@ from zephyrex.testing.factories import create_user
 from zephyreader_app import create
 
 PRO_PRICE = "price_test_pro"
+# contract/ at the repository root: what the server and the client both read.
+CONTRACT_DIRECTORY = Path(__file__).resolve().parents[3] / "contract"
 VIDEO = b"\x1aE\xdf\xa3" + secrets.token_bytes(2048)
 
 
@@ -77,7 +80,7 @@ def _subscriber(server: TestClient) -> Any:
     user = create_user(server)
     PaymentSubscriptionManager(model_registry=_registry(server), requester_id=env("ROOT_ID")).create(
         user_id=user.id,
-        provider="stripe",
+        provider="square",
         provider_instance_id=str(uuid.uuid4()),
         external_id=f"sub_{uuid.uuid4().hex}",
         plan_id=PRO_PRICE,
@@ -86,6 +89,23 @@ def _subscriber(server: TestClient) -> Any:
         refreshed_at=datetime.now(UTC),
     )
     return user
+
+
+@pytest.fixture
+def square(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
+    """Square's side of the subscriptions: each cancellation the server asks it for, as
+    (subscription, at the end of the period paid for), answered as Square answers one."""
+    from zephyrex.extensions.payment.EXT_Payment import EXT_Payment
+
+    cancelled: list[tuple[str, bool]] = []
+
+    async def at_square(instance: str, method: str, external_id: str, at_period_end: bool) -> dict[str, Any]:
+        assert method == "cancel_subscription"
+        cancelled.append((external_id, at_period_end))
+        return {"status": "active", "active": True, "cancel_at_period_end": True}
+
+    monkeypatch.setattr(EXT_Payment, "rotate_on_instance", at_square)
+    return cancelled
 
 
 def _teleprompter() -> Any:
@@ -287,7 +307,7 @@ class TestRecordings:
 
 class TestAccountDeletion:
     def test_deleting_an_account_erases_its_scripts_settings_and_recordings(
-        self, server: TestClient, other_user: Any, store: Path
+        self, server: TestClient, other_user: Any, store: Path, square: list[tuple[str, bool]]
     ) -> None:
         bll = _teleprompter()
         leaving = _subscriber(server)
@@ -320,6 +340,97 @@ class TestAccountDeletion:
             assert not live, model.__name__
         assert server.get(f"/v1/script/{staying['id']}", headers=_headers(other_user)).status_code == 200
 
+    def test_deleting_an_account_ends_its_subscription(
+        self, server: TestClient, square: list[tuple[str, bool]]
+    ) -> None:
+        """At the end of the period paid for (Square ends one no sooner): a deleted account
+        is never charged again. The subscription's record is kept, as a payment record."""
+        from zephyrex.extensions.payment.BLL_Payment import PaymentSubscriptionManager
+
+        leaving = _subscriber(server)
+        account = server.get("/v1/user", headers=_headers(leaving))
+        deleted = server.delete("/v1/user", headers=_headers(leaving, **{"If-Match": account.headers["ETag"]}))
+        assert deleted.status_code in (200, 204), deleted.text
+
+        [subscription] = PaymentSubscriptionManager(model_registry=_registry(server), requester_id=env("ROOT_ID")).list(
+            user_id=leaving.id
+        )
+        assert square == [(subscription.external_id, True)]
+        assert subscription.cancel_at_period_end
+
+    def test_thirty_days_after_an_account_is_deleted_nothing_of_it_is_left(
+        self, server: TestClient, other_user: Any
+    ) -> None:
+        """What the privacy policy promises: a deleted record is kept 30 days, in case it was
+        a mistake, then purged, and a deleted account leaves no row that names it."""
+        registry = _registry(server)
+        purge = _purge(registry)
+        leaving = create_user(server)
+        folder = _create(server, leaving, "script_folder", name="Talks").json()["script_folder"]
+        _create(server, leaving, "script", title="Mine", content="Hello.", script_folder_id=folder["id"])
+        _create(server, leaving, "prompter_preference", settings={"fontSize": 60})
+        staying = _create(server, other_user, "script", title="Theirs", content="Hi.").json()["script"]
+        _delete_account(server, leaving)
+
+        purge.purge(now=datetime.now(UTC) + timedelta(days=29))
+        assert _rows_naming(registry, leaving.id)
+        purge.purge(now=datetime.now(UTC) + timedelta(days=31))
+        assert _rows_naming(registry, leaving.id) == {}
+        assert server.get(f"/v1/script/{staying['id']}", headers=_headers(other_user)).status_code == 200
+
+    def test_a_subscribers_payment_record_outlasts_the_purge(
+        self, server: TestClient, square: list[tuple[str, bool]]
+    ) -> None:
+        """The law requires payment records to be kept, with the account they were made out
+        to: that row stays, hidden, and nothing else of the account does."""
+        registry = _registry(server)
+        leaving = _subscriber(server)
+        _create(server, leaving, "script", title="Mine", content="Hello.")
+        _create(server, leaving, "recording", title="Take", mime_type="video/webm")
+        _delete_account(server, leaving)
+
+        _purge(registry).purge(now=datetime.now(UTC) + timedelta(days=31))
+        assert set(_rows_naming(registry, leaving.id)) == {
+            "payment_subscriptions.user_id",
+            "users.id",
+            "users.created_by_user_id",
+            "users.deleted_by_user_id",
+        }
+
+
+def _purge(registry: Any) -> Any:
+    """The daily purge the app runs, as the privacy extension starts it."""
+    from zephyrex.extensions.privacy.EXT_Privacy import EXT_Privacy
+
+    [purge] = EXT_Privacy.register_services(model_registry=registry, requester_id=env("ROOT_ID"))
+    assert purge.retention == timedelta(days=30)
+    return purge
+
+
+def _delete_account(server: TestClient, user: Any) -> None:
+    account = server.get("/v1/user", headers=_headers(user))
+    deleted = server.delete("/v1/user", headers=_headers(user, **{"If-Match": account.headers["ETag"]}))
+    assert deleted.status_code in (200, 204), deleted.text
+
+
+def _rows_naming(registry: Any, value: str) -> dict[str, int]:
+    """How many rows, table by table and column by column, hold ``value``, deleted or not."""
+    from sqlalchemy import String, func, select
+
+    found: dict[str, int] = {}
+    session = registry.DB.session()
+    try:
+        for table in registry.DB.manager.Base.metadata.sorted_tables:
+            for column in table.columns:
+                if not isinstance(column.type, String):
+                    continue
+                count = session.execute(select(func.count()).select_from(table).where(column == value)).scalar_one()
+                if count:
+                    found[f"{table.name}.{column.name}"] = count
+    finally:
+        session.close()
+    return found
+
 
 class TestAi:
     def test_a_retone_needs_a_tone_and_no_configured_ai_is_503(self, server: TestClient, pro_user: Any) -> None:
@@ -327,6 +438,10 @@ class TestAi:
             "/v1/teleprompter/ai", json={"action": "retone", "content": "Hello"}, headers=_headers(pro_user)
         )
         assert missing.status_code == 422
+        unknown = server.post(
+            "/v1/teleprompter/ai", json={"action": "summarise", "content": "Hello"}, headers=_headers(pro_user)
+        )
+        assert unknown.status_code == 422, unknown.text
         unconfigured = server.post(
             "/v1/teleprompter/ai", json={"action": "shorten", "content": "Hello"}, headers=_headers(pro_user)
         )
@@ -349,11 +464,17 @@ def test_the_framework_routes_zephyreader_uses_are_mounted(server: TestClient, f
     assert plans.json()["plan"] == "free"
 
 
-def test_word_count_counts_spoken_words_only() -> None:
-    """The library's word count matches the editor's: no cue notes, heading marks or markers."""
+def test_word_count_counts_as_the_client_does() -> None:
+    """The library's word count matches the editor's, case by case: the cases the client's
+    spokenWordCount runs too (contract/word-count-cases.json)."""
     word_count = _teleprompter().word_count
+    cases = json.loads((CONTRACT_DIRECTORY / "word-count-cases.json").read_text(encoding="utf-8"))["cases"]
 
-    script = "# Opening\n\nGood evening [smile, pause] everyone.\n\nTonight we **launch** ==Zephyreader== - *today*."
-    assert word_count(script) == 9
-    assert word_count("") == 0
+    for case in cases:
+        assert word_count(case["text"]) == case["words"], case["text"]
     assert word_count(None) == 0
+
+
+def test_every_action_the_writer_takes_has_an_instruction() -> None:
+    bll = _teleprompter()
+    assert set(bll.AI_INSTRUCTIONS) == set(bll.AI_ACTIONS)

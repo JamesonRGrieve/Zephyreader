@@ -6,6 +6,7 @@
  * same-origin /api as a signed-in person, writes carrying their CSRF token.
  */
 import { expect, test } from '@playwright/test';
+import contract from '../../contract/teleprompter.json';
 import { call } from './support/api';
 import { signedInPerson } from './support/people';
 
@@ -132,6 +133,29 @@ test.describe('the shared contract', () => {
     await visitor.goto('/');
     expect((await call(visitor, 'GET', '/v1/script')).status()).toBe(401);
     await anonymous.close();
+    await ada.context.close();
+  });
+
+  test('the shared limits hold the same on both back ends (contract/teleprompter.json)', async ({ browser }, testInfo) => {
+    const { limits } = contract;
+    const ada = await signedInPerson(browser, testInfo);
+    const status = async (method: string, path: string, body: unknown) =>
+      (await call(ada.page, method, path, body)).status();
+
+    expect(await status('POST', '/v1/script', { script: { title: 'x'.repeat(limits.title_characters) } })).toBe(201);
+    expect(await status('POST', '/v1/script', { script: { title: 'x'.repeat(limits.title_characters + 1) } })).toBe(422);
+    const longScript = { script: { title: 'Long', content: 'a'.repeat(limits.script_characters + 1) } };
+    expect(await status('POST', '/v1/script', longScript)).toBe(422);
+    const folder = (characters: number) => ({ script_folder: { name: 'f'.repeat(characters) } });
+    expect(await status('POST', '/v1/script_folder', folder(limits.folder_name_characters))).toBe(201);
+    expect(await status('POST', '/v1/script_folder', folder(limits.folder_name_characters + 1))).toBe(422);
+    const bulky = { prompter_preference: { settings: { note: 'n'.repeat(limits.preferences_bytes) } } };
+    expect(await status('POST', '/v1/prompter_preference', bulky)).toBe(413);
+
+    // Live sync's rules are the framework's; lite keeps the same ones.
+    const message = (clientId: string, data: unknown) => ({ client_id: clientId, type: 'scroll', data });
+    expect(await status('POST', '/v1/live/script-x', message('not a valid id!', null))).toBe(422);
+    expect(await status('POST', '/v1/live/script-x', message('ghost', 'd'.repeat(64 * 1024 + 1)))).toBe(413);
     await ada.context.close();
   });
 });

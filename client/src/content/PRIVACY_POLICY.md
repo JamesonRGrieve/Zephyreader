@@ -40,7 +40,7 @@ If you keep a recording in your recordings library, the video is stored with its
 
 ### Your plan (hosted service)
 
-If you subscribe to a paid plan, the plan, the subscription's status and renewal date, and the payment processor's identifiers for you and your payments are stored. Your card details go to the payment processor and are never seen or stored by Zephyreader.
+If you subscribe to a paid plan, the plan, the subscription's status and renewal date, and Square's identifiers for you and your payments are stored. Square is the payment processor: your card details go to Square and are never seen or stored by Zephyreader.
 
 ### Sign-in records
 
@@ -66,7 +66,7 @@ Zephyreader's use of information received from Google APIs adheres to the [Googl
 
 - **Google** handles sign-in and serves the Drive files you import, under [Google's Privacy Policy](https://policies.google.com/privacy).
 - **Your browser's maker**, if you choose browser speech for voice-follow, as described above.
-- **The payment processor** (hosted service) handles checkout and billing for paid plans, under its own privacy policy, which checkout links to.
+- **Square** (hosted service) handles checkout and billing for paid plans, under [Square's Privacy Notice](https://squareup.com/legal/general/privacy).
 - **The AI and speech providers** the hosted service uses for the AI writer, captions and server speech recognition receive the text or audio you send to those features, only to process it.
 
 Nothing is sold to anyone.
@@ -91,8 +91,8 @@ The server keeps error logs to diagnose problems. They record what went wrong, a
 Your account, scripts, settings, recordings and Google connection are kept until you delete them or delete your account.
 
 - **Deleting a script, folder or recording** removes it from everything you see straight away, and a recording's video is deleted at once.
-- **Deleting your account**, on your account page, deletes it and everything listed under _What we store_ with it, including every recording's video, and signs you out. The only exception is the payment records the law requires to be kept for tax and accounting.
-- **On the hosted service**, a deleted record other than a video is hidden at once, so it can never be used or seen again, but stays in the database until the maintainer purges it. On a self-hosted copy it is gone at once.
+- **Deleting your account**, on your account page, deletes it and everything listed under _What we store_ with it, including every recording's video, signs you out on every device, and cancels your subscription so you're never charged again. The only exception is the payment records the law requires to be kept for tax and accounting, with the name and email address of the account they were made out to.
+- **On the hosted service**, a deleted record other than a video is hidden at once, so it can never be used or seen again, and kept for 30 days so a mistaken deletion can be undone on request. After 30 days it's deleted for good. On a self-hosted copy it is gone at once.
 
 You can stop Zephyreader using your Google account at any time, without deleting anything, by removing Zephyreader at [myaccount.google.com/permissions](https://myaccount.google.com/permissions). After that, the stored tokens no longer work.
 

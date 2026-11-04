@@ -7,10 +7,11 @@
 
 /** How long one clip is: long enough for a few words, short enough to follow speech. */
 export const CLIP_MS = 2500;
-const PREFERRED_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+/** What a voice clip is recorded as, best first (each one the server accepts: contract.test.ts). */
+export const CLIP_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
 
 export function supportedClipType(isSupported: (type: string) => boolean): string | null {
-  return PREFERRED_TYPES.find((type) => isSupported(type)) ?? null;
+  return CLIP_TYPES.find((type) => isSupported(type)) ?? null;
 }
 
 export class ClipRecorder {

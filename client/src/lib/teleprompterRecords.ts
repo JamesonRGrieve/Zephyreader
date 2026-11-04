@@ -9,13 +9,15 @@ import { z } from 'zod';
 import { ApiError, recordError } from '~/lib/apiErrors';
 import { prisma } from '~/lib/prisma';
 import { notFound, type ResourceSpec } from '~/lib/records';
+import { LIMITS } from '~/contract';
 import { spokenWordCount as wordCount } from '~/features/prompter/script';
 
-// The server's limits (BLL_Teleprompter.py), so both variants accept the same records.
-export const MAX_TITLE = 300;
-export const MAX_FOLDER_NAME = 120;
-export const MAX_SCRIPT_CHARACTERS = 1_000_000;
-export const MAX_PREFERENCES_BYTES = 16 * 1024;
+// The limits the SaaS server holds records to too (contract/teleprompter.json), so both
+// variants accept the same records.
+const MAX_TITLE = LIMITS.title_characters;
+const MAX_FOLDER_NAME = LIMITS.folder_name_characters;
+const MAX_SCRIPT_CHARACTERS = LIMITS.script_characters;
+const MAX_PREFERENCES_BYTES = LIMITS.preferences_bytes;
 
 /**
  * Lite has no teams, so it answers a record shared with one exactly as the SaaS free plan
@@ -149,9 +151,16 @@ export const scripts: ResourceSpec<Script, z.infer<typeof scriptCreate>, z.infer
   }),
 };
 
-const settings = z.record(z.string(), z.unknown()).refine((value) => JSON.stringify(value).length <= MAX_PREFERENCES_BYTES, {
-  message: `Settings may be at most ${MAX_PREFERENCES_BYTES} bytes`,
-});
+const settings = z.record(z.string(), z.unknown());
+
+/** The settings as stored: refused 413 past the shared limit, as the SaaS server refuses them. */
+function storedSettings(value: Record<string, unknown>): string {
+  const stored = JSON.stringify(value);
+  if (stored.length > MAX_PREFERENCES_BYTES) {
+    throw recordError(413, `Settings may be at most ${MAX_PREFERENCES_BYTES} bytes`);
+  }
+  return stored;
+}
 const preferenceCreate = z.object({ settings: settings.default({}) });
 const preferenceUpdate = z.object({ settings: settings.optional() });
 
@@ -181,13 +190,13 @@ export const prompterPreferences: ResourceSpec<
   },
   insert: (ownerId, input, stamp) =>
     prisma.prompterPreference.create({
-      data: { createdById: ownerId, settings: JSON.stringify(input.settings), updatedAt: stamp },
+      data: { createdById: ownerId, settings: storedSettings(input.settings), updatedAt: stamp },
     }),
   async updateIfCurrent(id, version, input, stamp, userId) {
     const { count } = await prisma.prompterPreference.updateMany({
       where: { id, updatedAt: version },
       data: {
-        ...(input.settings === undefined ? {} : { settings: JSON.stringify(input.settings) }),
+        ...(input.settings === undefined ? {} : { settings: storedSettings(input.settings) }),
         updatedAt: stamp,
         updatedById: userId,
       },

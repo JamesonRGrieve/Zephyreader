@@ -89,7 +89,7 @@ def seed(app: object) -> None:
     pro = create_user(TestClient(app), email=PRO_EMAIL)  # type: ignore[arg-type,no-untyped-call]
     PaymentSubscriptionManager(model_registry=registry, requester_id=root).create(
         user_id=pro.id,
-        provider="stripe",
+        provider="square",
         provider_instance_id=str(uuid.uuid4()),
         external_id=f"sub_{uuid.uuid4().hex}",
         plan_id=PRO_PRICE,

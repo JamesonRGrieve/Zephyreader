@@ -1,0 +1,20 @@
+{
+  "$comment": "Zephyreader's knowledge shared by both back ends and the UI: the self-hosted lite API (client/src/lib), the SaaS server (server/extensions/teleprompter) and the front end read these values from here, never their own copies. Sizes are bytes or characters as named.",
+  "limits": {
+    "title_characters": 300,
+    "folder_name_characters": 120,
+    "script_characters": 1000000,
+    "preferences_bytes": 16384,
+    "recording_bytes": 104857600
+  },
+  "paid_features": {
+    "aiWriter": "ai_writer",
+    "captions": "captions",
+    "cloudRecordings": "cloud_recordings",
+    "serverVoice": "server_voice",
+    "teamSharing": "team_sharing"
+  },
+  "ai_actions": ["write", "shorten", "lengthen", "retone", "translate"],
+  "recording_media_types": ["video/webm", "video/mp4", "audio/webm", "audio/ogg", "audio/mp4"],
+  "clip_media_types": ["audio/webm", "audio/ogg", "audio/wav", "audio/mp4", "audio/mpeg"]
+}

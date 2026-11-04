@@ -7,11 +7,13 @@ import { Input } from 'zephyrex/ui/input';
 import { Label } from 'zephyrex/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'zephyrex/ui/select';
 import { Textarea } from 'zephyrex/ui/textarea';
+import { AI_ACTIONS } from '~/contract';
 
-export const AI_ACTIONS = ['write', 'shorten', 'lengthen', 'retone', 'translate'] as const;
-export type AiAction = (typeof AI_ACTIONS)[number];
+/** What the writer can be asked to do: the actions the server takes (contract/teleprompter.json). */
+export type AiAction = string;
 
-const LABELS: Record<AiAction, string> = {
+/** Each action, as the panel names it; ai.test.ts checks every contract action has one. */
+export const AI_ACTION_LABELS: Readonly<Record<AiAction, string>> = {
   write: 'Write from a brief',
   shorten: 'Shorten',
   lengthen: 'Lengthen',
@@ -71,7 +73,7 @@ export default function AiPanel({ content, run, onResult }: AiPanelProps) {
         <SelectContent>
           {AI_ACTIONS.map((option) => (
             <SelectItem key={option} value={option}>
-              {LABELS[option]}
+              {AI_ACTION_LABELS[option]}
             </SelectItem>
           ))}
         </SelectContent>
@@ -101,7 +103,7 @@ export default function AiPanel({ content, run, onResult }: AiPanelProps) {
         </div>
       )}
       <Button onClick={() => void go()} disabled={busy || source.trim() === ''}>
-        {busy ? 'Writing…' : action === 'write' ? 'Write the script' : `${LABELS[action]} the script`}
+        {busy ? 'Writing…' : action === 'write' ? 'Write the script' : `${AI_ACTION_LABELS[action]} the script`}
       </Button>
       {action !== 'write' && (
         <p className='text-muted-foreground text-xs'>This replaces the script. You can undo it from the editor.</p>

@@ -12,7 +12,8 @@ export type RecordingSource = (typeof RECORDING_SOURCES)[number];
 export const RESOLUTIONS = { '720p': { width: 1280, height: 720 }, '1080p': { width: 1920, height: 1080 } } as const;
 export type Resolution = keyof typeof RESOLUTIONS;
 
-const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+/** What a take is recorded as, best first (each one the server accepts: contract.test.ts). */
+export const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
 const FRAME_RATE = 30;
 /** The camera inset over a screen recording: a quarter of the frame's width, inset from the corner. */
 const INSET_WIDTH_SHARE = 0.25;

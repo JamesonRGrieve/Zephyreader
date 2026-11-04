@@ -10,14 +10,10 @@
  *   end that sells none (lite) has no paid features to show.
  */
 import { hasFeature, useEntitlement, useServerExtensions, type Entitlement } from 'zephyrex';
+import { PAID_FEATURE_IDS } from '~/contract';
 
-export const PAID_FEATURES = {
-  aiWriter: 'ai_writer',
-  captions: 'captions',
-  cloudRecordings: 'cloud_recordings',
-  serverVoice: 'server_voice',
-  teamSharing: 'team_sharing',
-} as const;
+/** The features a plan sells, by the ids the server's plans name them (contract/teleprompter.json). */
+export const PAID_FEATURES = PAID_FEATURE_IDS;
 
 export type PaidFeature = (typeof PAID_FEATURES)[keyof typeof PAID_FEATURES];
 

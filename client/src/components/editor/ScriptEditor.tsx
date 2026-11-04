@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from 'zephyrex/ui/input';
 import { Label } from 'zephyrex/ui/label';
 import { Textarea } from 'zephyrex/ui/textarea';
+import { LIMITS } from '~/contract';
 import { PAID_FEATURES, type Capabilities } from '~/features/capabilities';
 import { scriptSchema, type Script } from '~/features/data/records';
 import { readingSeconds, spokenWordCount } from '~/features/prompter/script';
@@ -18,7 +19,6 @@ import { exportName, plainText, wrapSelection, type Markup } from './markup';
 
 /** How long typing pauses before the script saves itself. */
 export const AUTOSAVE_DELAY_MS = 1500;
-const MAX_TITLE = 300;
 
 export interface ScriptEditorProps {
   script: Script;
@@ -142,7 +142,7 @@ export default function ScriptEditor({ script, capabilities, write, rewrite, wor
           <Input
             id={titleId}
             value={draft.title}
-            maxLength={MAX_TITLE}
+            maxLength={LIMITS.title_characters}
             onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
             aria-invalid={!valid}
           />

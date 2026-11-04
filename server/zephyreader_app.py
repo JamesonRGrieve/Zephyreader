@@ -33,6 +33,9 @@ os.environ.setdefault("APP_CORS_ALLOWED_ORIGINS", "http://localhost:6969")
 # development, the client container's address in production. Without it every visitor shares
 # one rate-limit bucket.
 os.environ.setdefault("TRUSTED_PROXIES", "127.0.0.1/32,::1/128")
+# A deleted record is hidden at once and purged for good 30 days later (a mistake can be
+# undone until then): what the privacy policy promises (client/src/content/PRIVACY_POLICY.md).
+os.environ.setdefault("PRIVACY_PURGE_DELETED_AFTER_DAYS", "30")
 
 # From the framework: auth_session for sign-in sessions, auth_invitations for inviting teammates,
 # oauth_consumer for signing in with

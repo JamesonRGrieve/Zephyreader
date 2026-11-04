@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'zephyrex/hooks/useToast';
+import { LIMITS } from '~/contract';
 import ConfirmDialog from '~/components/common/ConfirmDialog';
 import NameDialog from '~/components/common/NameDialog';
 import { useCapabilities } from '~/features/capabilities';
@@ -19,8 +20,6 @@ import { IMPORT_ACCEPT, importFile } from '~/features/import/fileImport';
 import DriveImportDialog from './DriveImportDialog';
 import { copyTitle } from './libraryView';
 import ScriptLibrary from './ScriptLibrary';
-
-const MAX_FOLDER_NAME = 120;
 
 type Pending =
   | { kind: 'none' }
@@ -138,7 +137,7 @@ export default function LibraryPage() {
         label='Folder name'
         initial={pending.kind === 'rename-folder' ? pending.folder.name : ''}
         confirm={pending.kind === 'rename-folder' ? 'Rename' : 'Create'}
-        maxLength={MAX_FOLDER_NAME}
+        maxLength={LIMITS.folder_name_characters}
         onClose={close}
         onSubmit={(name) => {
           const target = pending;

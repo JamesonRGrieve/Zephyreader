@@ -30,11 +30,9 @@ from typing import Any, ClassVar, Literal
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel as ResponseModel
-from pydantic import Field
+from pydantic import Field, field_validator
 from zephyrex.extensions.entitlements.BLL_Entitlements import require_feature, require_within_limit
 from zephyrex.extensions.privacy.Erasure import register_eraser
-
-# Registers Zephyreader's plans. Resolves only at runtime, through the extensions namespace path.
 from zephyrex.extensions.teleprompter.Catalogue import (  # type: ignore[import-not-found]
     AI_WRITER,
     CAPTIONS,
@@ -42,6 +40,14 @@ from zephyrex.extensions.teleprompter.Catalogue import (  # type: ignore[import-
     RECORDING_MEGABYTES,
     SERVER_VOICE,
     TEAM_SHARING,
+)
+
+# Registers Zephyreader's plans. Resolves only at runtime, through the extensions namespace path.
+from zephyrex.extensions.teleprompter.Contract import (  # type: ignore[import-not-found]
+    AI_ACTIONS,
+    CLIP_MEDIA_TYPES,
+    LIMITS,
+    RECORDING_MEDIA_TYPES,
 )
 from zephyrex.lib.ContentNegotiation import skip_negotiation
 from zephyrex.lib.CustomRoute import ExposeIn, custom_route
@@ -63,21 +69,22 @@ from zephyrex.pydantic2.fastapi.types import RouteType
 # The framework's registry BaseModel, which it re-exports without declaring it.
 from zephyrex.pydantic2.registry import BaseModel  # type: ignore[attr-defined]
 
-MAX_TITLE = 300
-MAX_FOLDER_NAME = 120
-# A script's Markdown, in characters (a feature-length script is well under 200k).
-MAX_SCRIPT_CHARACTERS = 1_000_000
-MAX_PREFERENCES_BYTES = 16 * 1024
-# The cloud extension carries an upload in memory up to this; a longer take is split by the client.
-MAX_RECORDING_BYTES = 100 * 1024 * 1024
+# Limits the lite API holds records to too (contract/teleprompter.json).
+MAX_TITLE: int = LIMITS["title_characters"]
+MAX_FOLDER_NAME: int = LIMITS["folder_name_characters"]
+MAX_SCRIPT_CHARACTERS: int = LIMITS["script_characters"]
+MAX_PREFERENCES_BYTES: int = LIMITS["preferences_bytes"]
+# The largest take the upload route takes (above the framework's global body cap); the
+# cloud extension carries it in memory.
+MAX_RECORDING_BYTES: int = LIMITS["recording_bytes"]
 # What the AI transcribes in one request (the framework's audio limit).
 MAX_CAPTION_AUDIO_BYTES = 25 * 1024 * 1024
 MAX_CLIP_BYTES = 2 * 1024 * 1024
 MAX_AI_CHARACTERS = 50_000
 BYTES_PER_MEGABYTE = 1024 * 1024
 CLIP_SIZE_RULE = f"A clip is 1 byte to {MAX_CLIP_BYTES // BYTES_PER_MEGABYTE} MB"
-RECORDING_MIME_TYPES = ("video/webm", "video/mp4", "audio/webm", "audio/ogg", "audio/mp4")
-CLIP_MIME_TYPES = ("audio/webm", "audio/ogg", "audio/wav", "audio/mp4", "audio/mpeg")
+RECORDING_MIME_TYPES: tuple[str, ...] = RECORDING_MEDIA_TYPES
+CLIP_MIME_TYPES: tuple[str, ...] = CLIP_MEDIA_TYPES
 RECORDINGS_FOLDER = "recordings"
 SERVER_KEPT_RECORDING_FIELDS = ("size_bytes", "storage_provider", "storage_path", "transcript", "caption_segments")
 
@@ -88,7 +95,6 @@ TRANSCRIBE_PATH = r"/v1/teleprompter/transcribe"
 for _path in (RECORDING_CONTENT_PATH, TRANSCRIBE_PATH):
     skip_negotiation(_path)
 
-AiAction = Literal["write", "shorten", "lengthen", "retone", "translate"]
 CaptionFormat = Literal["vtt", "srt"]
 
 SYSTEM_PROMPT = (
@@ -494,10 +500,21 @@ class RecordingManager(AbstractBLLManager[RecordingModel], RouterMixin):
 
 
 class AiRequest(ResponseModel):
-    action: AiAction
+    action: str = Field(
+        ...,
+        description="What the writer is asked to do",
+        json_schema_extra={"enum": list(AI_ACTIONS)},
+    )
     content: str = Field(..., min_length=1, max_length=MAX_AI_CHARACTERS)
     tone: str | None = Field(None, max_length=60)
     language: str | None = Field(None, max_length=60)
+
+    @field_validator("action")
+    @classmethod
+    def _an_action_the_writer_takes(cls, action: str) -> str:
+        if action not in AI_ACTIONS:
+            raise ValueError(f"action must be one of {', '.join(AI_ACTIONS)}")
+        return action
 
 
 class AiResult(ResponseModel):

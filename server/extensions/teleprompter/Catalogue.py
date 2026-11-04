@@ -3,8 +3,9 @@
 
 Importing this registers the plans with the framework's entitlements.
 
-The plans are provisional (operator to set names, prices and limits; the Stripe
-prices that buy each are deployment configuration, ENTITLEMENT_<PLAN>_PLAN_IDS).
+The plans are provisional (operator to set names, prices and limits). Square is the
+payment processor: the Square plan variations that buy each plan are deployment
+configuration, ENTITLEMENT_<PLAN>_PLAN_IDS.
 The free plan is everything the self-hosted lite variant does for one person:
 the editor and library, every display and scroll mode, voice-follow in the
 browser, remote control, local recording. Paid plans add what needs the server:
@@ -14,11 +15,15 @@ on the team plan, sharing scripts with a team.
 
 from zephyrex.extensions.entitlements.Plans import Plan, register_plan
 
-AI_WRITER = "ai_writer"
-CAPTIONS = "captions"
-CLOUD_RECORDINGS = "cloud_recordings"
-SERVER_VOICE = "server_voice"
-TEAM_SHARING = "team_sharing"
+# The feature ids, as the client names them too (contract/teleprompter.json). Resolves only
+# at runtime, through the extensions namespace path.
+from zephyrex.extensions.teleprompter.Contract import PAID_FEATURES  # type: ignore[import-not-found]
+
+AI_WRITER = PAID_FEATURES["aiWriter"]
+CAPTIONS = PAID_FEATURES["captions"]
+CLOUD_RECORDINGS = PAID_FEATURES["cloudRecordings"]
+SERVER_VOICE = PAID_FEATURES["serverVoice"]
+TEAM_SHARING = PAID_FEATURES["teamSharing"]
 
 # Megabytes of recordings a plan may keep in the cloud.
 RECORDING_MEGABYTES = "recording_megabytes"

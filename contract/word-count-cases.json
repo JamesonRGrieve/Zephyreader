@@ -1,0 +1,17 @@
+{
+  "$comment": "How many words a script has when spoken: cue notes, heading marks and emphasis markers left out, and only tokens with a letter or digit counted. The client (spokenWordCount) and the server (word_count) both run every case.",
+  "cases": [
+    { "text": "Hello [wave] there friends", "words": 3 },
+    { "text": "  ", "words": 0 },
+    { "text": "# Opening\n\nGood evening [smile, pause] everyone.\n\nTonight we **launch** ==Zephyreader== - *today*.", "words": 9 },
+    { "text": "## Q&A — ask anything", "words": 3 },
+    { "text": "Café 2026 naïve", "words": 3 },
+    { "text": "snake_case words_here", "words": 2 },
+    { "text": "[an entire cue line]", "words": 0 },
+    { "text": "Line one\n[pause]\nLine two", "words": 4 },
+    { "text": "**bold** and __also__", "words": 3 },
+    { "text": "日本語 テキスト", "words": 2 },
+    { "text": "x#y is not a heading", "words": 5 },
+    { "text": "   # an indented hash", "words": 3 }
+  ]
+}

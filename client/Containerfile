@@ -14,10 +14,11 @@
 #     --build-context dynamic-form=../../dynamic-form \
 #     --build-context auth=../../auth \
 #     --build-context client-framework=../../client-framework \
+#     --build-context contract=../contract \
 #     --build-arg APP_URI=https://prompt.example.com .
 #
-# Wrap the build in memq on shared machines:
-#   /home/jameson/Source/mem-queuer/memq run -m 12 -- podman build ...
+# `contract` is the repository's contract/ directory, the knowledge the app shares with
+# the SaaS server (read at build time; next.config.js widens the build root to include it).
 #
 # Run (the SQLite database lives on a volume; migrate once per schema change):
 #   podman volume create zephyreader-data
@@ -71,17 +72,16 @@ RUN pnpm install --frozen-lockfile
 # ---- build ----
 FROM deps AS builder
 # Public URLs are inlined into the client bundle at build time (next.config.js `env`).
-ARG APP_NAME="Open Teleprompt"
-ARG APP_DESCRIPTION="An open source teleprompting software."
 ARG APP_URI
 ARG DEFAULT_THEME_MODE=dark
-ENV APP_NAME=${APP_NAME} \
-    APP_DESCRIPTION=${APP_DESCRIPTION} \
-    APP_URI=${APP_URI} \
+ENV APP_URI=${APP_URI} \
     DEFAULT_THEME_MODE=${DEFAULT_THEME_MODE} \
     NEXT_OUTPUT_STANDALONE=1
+COPY --from=contract . /src/zephyreader/contract/
 COPY . .
-RUN pnpm run build
+# public/ holds only what is fetched into it (the voice model, scripts/fetch-voice-model.mjs);
+# it exists either way, for the runtime stage to copy.
+RUN mkdir -p public && pnpm run build
 
 # ---- one-off schema migration (`podman build --target migrate`) ----
 FROM builder AS migrate
@@ -101,15 +101,15 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     DATABASE_URL=file:/data/zephyreader.db \
     APP_URI=${APP_URI}
-WORKDIR /srv/app
-# The injected packages live in the app's own node_modules, so the standalone
-# output (traced from the app root) already carries them.
+# The standalone output is traced from the repository root, so the server sits in its
+# client/ directory; the injected packages live in the app's own node_modules there.
+WORKDIR /srv/app/client
 COPY --from=builder --chown=node:node /src/zephyreader/client/.next/standalone /srv/app/
-COPY --from=builder --chown=node:node /src/zephyreader/client/.next/static /srv/app/.next/static
-COPY --from=builder --chown=node:node /src/zephyreader/client/public /srv/app/public
+COPY --from=builder --chown=node:node /src/zephyreader/client/.next/static /srv/app/client/.next/static
+COPY --from=builder --chown=node:node /src/zephyreader/client/public /srv/app/client/public
 # Read from the working directory at request time by /docs/privacy.
-COPY --from=builder --chown=node:node /src/zephyreader/client/src/content /srv/app/src/content
-COPY --from=builder --chown=node:node /src/zephyreader/client/server-wrapper.js /srv/app/server-wrapper.js
+COPY --from=builder --chown=node:node /src/zephyreader/client/src/content /srv/app/client/src/content
+COPY --from=builder --chown=node:node /src/zephyreader/client/server-wrapper.js /srv/app/client/server-wrapper.js
 RUN mkdir -p /data && chown node:node /data
 VOLUME /data
 USER node

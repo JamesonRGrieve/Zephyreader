@@ -4,12 +4,19 @@
  * RS256 ID tokens and enforces the token-endpoint rules a real IdP does
  * (single-use codes, client authentication, redirect_uri match, PKCE S256).
  */
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWTVerifyGetKey } from 'jose';
-import { pkceChallenge } from '~/lib/auth/crypto';
 import type { OidcProvider } from '~/lib/auth/oauth';
+
+/**
+ * RFC 7636's S256 challenge, worked out here as an identity provider would, not with the
+ * app's own helper: a test that checks the app against its own code could not catch it.
+ */
+function s256(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url');
+}
 
 export interface IdpClaims {
   sub: string;
@@ -103,7 +110,7 @@ export class FakeIdp {
       form.get('client_id') === FakeIdp.CLIENT_ID &&
       form.get('client_secret') === FakeIdp.CLIENT_SECRET &&
       form.get('redirect_uri') === grant.redirectUri &&
-      pkceChallenge(form.get('code_verifier') ?? '') === grant.challenge;
+      s256(form.get('code_verifier') ?? '') === grant.challenge;
     if (!valid) {
       res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'invalid_grant' }));
       return;
