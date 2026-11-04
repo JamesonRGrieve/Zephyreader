@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Builds Zephyreader from main and places it on prod-zephyreader. Every step runs in a fresh
+# container from the pinned image; the runner host provides nothing but podman. The framework
+# repositories come from GitHub at the commits deploy/frameworks.env pins.
+# Until launch it never starts anything (deploy/ship.sh): the app stays disabled until the
+# pre-launch network security audit passes (operator, 2026-11-04).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod-zephyreader
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # The Zephyrex Forgejo runner: rootless podman on a VM, a fresh container per job.
+    runs-on: zephyrex-podman
+    container:
+      # node:24-trixie: Node 24 on Debian 13, the CT's release (the image Cule's deploy pins).
+      image: docker.io/library/node@sha256:611b2e34ec1dd43a7bd4a334f146be7b0b51e8827acb86f94ca4c078cc53bba5
+    timeout-minutes: 60
+    env:
+      UV_VERSION: 0.11.16
+      PNPM_VERSION: 11.1.1
+      WORKSPACE_ROOT: /tmp/zephyreader-build
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    steps:
+      - name: Check out Zephyreader
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      # The runner network may have no IPv6 egress, while Debian's mirrors and npm answer AAAA
+      # first: apt is told to use IPv4, and Node to prefer it.
+      - name: Install the toolchain
+        run: |
+          echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends rsync openssh-client curl ca-certificates git >/dev/null
+          npm install -g "pnpm@${PNPM_VERSION}" >/dev/null
+          curl -LsSf --ipv4 "https://astral.sh/uv/${UV_VERSION}/install.sh" | env UV_INSTALL_DIR=/usr/local/bin sh
+
+      - name: Fetch the frameworks
+        run: deploy/fetch-frameworks.sh "$WORKSPACE_ROOT"
+
+      - name: Build the server
+        run: deploy/build-server.sh "$WORKSPACE_ROOT" "$WORKSPACE_ROOT/out/server"
+
+      - name: Build the client
+        run: |
+          set -a
+          . deploy/deploy.env
+          set +a
+          deploy/build-client.sh "$WORKSPACE_ROOT" "$WORKSPACE_ROOT/out/client"
+
+      - name: Place on prod-zephyreader
+        env:
+          # The key is the one secret; where to deploy and the pinned host key are variables.
+          ZEPHYREADER_DEPLOY_KEY: ${{ secrets.ZEPHYREADER_DEPLOY_KEY }}
+          ZEPHYREADER_DEPLOY_KNOWN_HOSTS: ${{ vars.ZEPHYREADER_DEPLOY_KNOWN_HOSTS }}
+          ZEPHYREADER_DEPLOY_HOST: ${{ vars.ZEPHYREADER_DEPLOY_HOST }}
+          ZEPHYREADER_DEPLOY_USER: ${{ vars.ZEPHYREADER_DEPLOY_USER }}
+        run: deploy/ship.sh "$WORKSPACE_ROOT/out/server" "$WORKSPACE_ROOT/out/client"
