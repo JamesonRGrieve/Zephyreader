@@ -1,0 +1,6 @@
+{
+  "extends": ["zephyrex/biome"],
+  "files": {
+    "includes": ["src/**", "*.ts"]
+  }
+}

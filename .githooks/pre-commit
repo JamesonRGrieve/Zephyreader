@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Pre-commit gate: blocks a commit on any regression (Zephyrex Framework App Standards; the
+# ratchets are the framework's own, zephyrex-gates, never a copy). Install once per clone:
+#   git config core.hooksPath .githooks
+# Before a release candidate, a commit may skip this after its targeted checks, with that scope
+# in the message (operator, 2026-11-20).
+set -euo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+
+echo "[pre-commit] server: format, lint, types, tests"
+cd "$REPO/server"
+.venv/bin/ruff format --check .
+.venv/bin/ruff check .
+.venv/bin/mypy .
+.venv/bin/python -m pytest -q
+
+echo "[pre-commit] client: format, the framework's ratchets, unit tests"
+cd "$REPO/client"
+# The binaries directly: pnpm's dependency check would reinstall over the injected framework packages.
+./node_modules/.bin/prettier --check .
+./node_modules/.bin/zephyrex-gates check
+./node_modules/.bin/vitest run
+
+echo "[pre-commit] All checks passed. The browser suites (client: e2e, Storybook) run before a push."

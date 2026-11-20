@@ -54,3 +54,8 @@ yarn.lock
 
 # the on-device voice model (pnpm fetch:voice-model)
 /public/models/
+
+# Ratchet coverage reports (regenerated each run by zephyrex-gates; the baselines are committed)
+.important-coverage.json
+.js-coverage.json
+.symmetry-coverage.json
