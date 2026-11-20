@@ -1,3 +1,4 @@
+// @vitest-environment node
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { User } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
