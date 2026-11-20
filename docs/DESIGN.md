@@ -101,3 +101,4 @@ confirms it.** Size is rough: S is a day or less, M a few days, L a week or more
 | **Review link** | Send a read-only link to a script for someone without an account to read and comment on | M | A share token and permission model in the framework; SaaS only |
 | **Slide sync** | Cue marks in the script turn the slides in Google Slides or a presenter remote, so one click moves both | M | A Slides scope on the `cloud` Google provider; or a keyboard relay for local decks |
 | **Scripts as files** | Lite keeps each script as a Markdown file in a folder the person chooses, so their own sync tool (Nextcloud, Git) carries them | M | The browser's File System Access API (Chromium only), with a fallback to the database |
+| **Bulk actions in the library** | Tick several scripts or takes, then move, star or delete them together, with one Undo for the lot | S | client-framework `useSelection` and `SelectionBar` (`543f3d0e`), as Gifts uses them; both editions |
