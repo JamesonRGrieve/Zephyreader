@@ -14,6 +14,9 @@ export default defineConfig({
     maxWorkers: '100%',
     globals: true,
     exclude: ['**/node_modules/**', '.next/**', 'e2e/**', 'tests/**', '**/*.stories.{ts,tsx}'],
+    // The framework through Vite, not Node, so the setup's next/navigation mock reaches its
+    // imports too (it imports 'next/navigation.js'): its header renders in a test as in the app.
+    server: { deps: { inline: ['zephyrex'] } },
   },
   resolve: {
     alias: {
