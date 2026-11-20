@@ -1,13 +1,14 @@
 # Zephyreader
 
-OpenTeleprompt: present a Google Doc (or a Nextcloud document) as a teleprompter,
-with one "main" window driving the scroll position of any number of follower
-windows over server-sent events.
+OpenTeleprompt: a teleprompter for speakers, video creators and people on calls, with
+voice-follow scrolling, remotes, follower displays and recording.
 
-It is a Next.js app built on the Zephyrex client framework. There is no separate
-backend: the Next API routes under `src/app/api/v1` implement the slice of the
-server-framework API the app needs (auth, user, sessions) with the same paths,
-payloads and error bodies, so the framework's client works against it unchanged.
+It ships as two editions from one Next.js front end: **lite** (self-hosted, its own API routes
+on SQLite) and **SaaS** (the Zephyrex server framework in `server/`). Who it is for, how it is
+built on the Zephyrex frameworks and the standards it meets are in [DESIGN.md](DESIGN.md). The
+feature list and the shared HTTP contract are in [FEATURES.md](FEATURES.md).
+
+The steps below run the lite edition from `client/`.
 
 ## Running it
 
@@ -75,7 +76,8 @@ pnpm typecheck
 pnpm test:e2e     # playwright; builds and serves the app
 ```
 
-Wrap full builds in `/home/jameson/Source/mem-queuer/memq run -m 10 -- pnpm build`.
+Heavy runs (builds, the full e2e suite) belong on a build runner, not a desktop; see
+[../deploy/README.md](../deploy/README.md) for the pinned build image.
 
 ## License
 
