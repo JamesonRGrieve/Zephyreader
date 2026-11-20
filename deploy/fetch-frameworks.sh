@@ -22,7 +22,15 @@ fetch() {
   git init -q "$root/$name"
   git -C "$root/$name" fetch -q --depth 1 "$url" "$ref"
   git -C "$root/$name" checkout -q FETCH_HEAD
-  echo "$name at $(git -C "$root/$name" rev-parse --short HEAD)"
+  # A pin is a full commit SHA. Anything else (a branch, a short or mistyped SHA, a server
+  # answering with another commit) is refused here, before a build can use it.
+  local head
+  head=$(git -C "$root/$name" rev-parse HEAD)
+  if [ "$head" != "$ref" ]; then
+    echo "$name: pinned $ref but fetched $head" >&2
+    exit 1
+  fi
+  echo "$name at $head"
 }
 
 fetch server-framework https://github.com/JamesonRGrieve/ServerFramework.git "$SERVER_FRAMEWORK_REF"

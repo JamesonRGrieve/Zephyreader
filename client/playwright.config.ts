@@ -6,8 +6,10 @@
  * - `saas`: the same UI over the SaaS server (../server, e2e_server.py), on a throwaway database.
  *
  * People sign in through the browser at a test OpenID provider (e2e/support/idp.ts) that
- * stands in for Google for both back ends. Each server has its own port and build directory,
- * so the suite runs beside a dev server.
+ * stands in for Google for both back ends. Each edition is a production build (`next build`,
+ * then `next start`) in its own build directory, so the suite tests what ships and runs beside
+ * a dev server. The two builds run one after the other: two Next processes in one client
+ * directory at once rewrite next-env.d.ts under each other.
  */
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,8 +20,11 @@ export const PORTS = { idp: 47100, server: 47101, lite: 47102, saas: 47103 } as 
 const host = (port: number) => `http://127.0.0.1:${port}`;
 export const IDP = host(PORTS.idp);
 const scratch = mkdtempSync(path.join(process.env.E2E_SCRATCH ?? tmpdir(), 'zephyreader-e2e-'));
-const NEXT_DEV = './node_modules/.bin/next dev';
-const STARTUP_MS = 300_000;
+const NEXT = './node_modules/.bin/next';
+/** Lite writes this once its build is done; the SaaS build waits for it. */
+const LITE_BUILT = path.join(scratch, 'lite-built');
+// Two production builds in turn, on a shared build runner.
+const STARTUP_MS = 900_000;
 
 const shared = {
   NEXT_TELEMETRY_DISABLED: '1',
@@ -86,14 +91,14 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: `./node_modules/.bin/prisma migrate deploy && ${NEXT_DEV} -p ${PORTS.lite} -H 127.0.0.1`,
+      command: `./node_modules/.bin/prisma migrate deploy && ${NEXT} build && touch '${LITE_BUILT}' && ${NEXT} start -p ${PORTS.lite} -H 127.0.0.1`,
       url: `${host(PORTS.lite)}/api/v1/alive`,
       reuseExistingServer: false,
       timeout: STARTUP_MS,
       env: lite,
     },
     {
-      command: `${NEXT_DEV} -p ${PORTS.saas} -H 127.0.0.1`,
+      command: `until [ -e '${LITE_BUILT}' ]; do sleep 1; done; ${NEXT} build && ${NEXT} start -p ${PORTS.saas} -H 127.0.0.1`,
       url: `${host(PORTS.saas)}/user`,
       reuseExistingServer: false,
       timeout: STARTUP_MS,
