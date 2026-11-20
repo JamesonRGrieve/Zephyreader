@@ -15,8 +15,11 @@ _extensions_dir = Path(__file__).resolve().parent / "extensions"
 
 os.environ.setdefault("EXTENSIONS_PATH", str(_extensions_dir))
 os.environ.setdefault("DATABASE_TYPE", "sqlite")
-# One database per xdist worker: each worker boots its own app and seeds it.
-os.environ.setdefault("DATABASE_NAME", f"test_zephyreader_{os.environ.get('PYTEST_XDIST_WORKER', 'main')}")
+# One database per xdist worker: each worker boots its own app and seeds it. Assigned, never
+# setdefault: the xdist controller runs this file first and its value is inherited by every
+# worker, so setdefault would leave them all seeding one database (duplicate seed rows, then
+# "Request uncovered multiple ...Model" 409s; SOP Python §11).
+os.environ["DATABASE_NAME"] = f"test_zephyreader_{os.environ.get('PYTEST_XDIST_WORKER', 'main')}"
 os.environ.setdefault("DATABASE_PATH", tempfile.mkdtemp(prefix="zephyreader-db-"))
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-32-bytes-or-more-aaaaaa")
 os.environ.setdefault("SEED_DATA", "true")

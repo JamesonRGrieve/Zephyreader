@@ -2501,6 +2501,7 @@ requires-dist = [
     { name = "web3", marker = "extra == 'crypto'", specifier = ">=7.0" },
     { name = "webauthn", marker = "extra == 'webauthn-consumer'", specifier = ">=3.0.1" },
     { name = "zephyrex", extras = ["acl-rbac"], marker = "extra == 'all'" },
+    { name = "zephyrex", extras = ["agreements"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["ai"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["ai-agents"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["ai-chains"], marker = "extra == 'all'" },
@@ -2543,6 +2544,7 @@ requires-dist = [
     { name = "zephyrex", extras = ["forward-auth-consumer"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["forward-auth-provider"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["genealogy"], marker = "extra == 'all'" },
+    { name = "zephyrex", extras = ["gifts"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["health"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["kerberos-consumer"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["kerberos-provider"], marker = "extra == 'all'" },
@@ -2574,6 +2576,7 @@ requires-dist = [
     { name = "zephyrex", extras = ["quota"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["radius-consumer"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["radius-provider"], marker = "extra == 'all'" },
+    { name = "zephyrex", extras = ["rota"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["saml-consumer"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["saml-provider"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["scim-consumer"], marker = "extra == 'all'" },
@@ -2591,4 +2594,4 @@ requires-dist = [
     { name = "zephyrex", extras = ["x509-consumer"], marker = "extra == 'all'" },
     { name = "zephyrex", extras = ["x509-provider"], marker = "extra == 'all'" },
 ]
-provides-extras = ["cache", "mcp-server", "acl-rbac", "ai", "ai-agents", "ai-chains", "ai-memories", "ai-prompts", "ai-tuning", "audit-retention", "auth-api-keys", "auth-device-pairing", "auth-invitations", "auth-lockout", "auth-magic-link", "auth-marketplace", "auth-merge", "auth-mfa", "auth-notifications", "auth-privacy", "auth-recovery-questions", "auth-session", "automotive", "backup-restore", "billing", "book", "cad", "calendar", "cloud", "contacts", "conversations", "crypto", "database", "database-memory", "ecommerce", "email", "entitlements", "erp", "fdm-sla-printing", "federation", "fileio", "forward-auth-consumer", "forward-auth-provider", "genealogy", "health", "kerberos-consumer", "kerberos-provider", "ldap-consumer", "ldap-provider", "live-sync", "local-ai", "local-ai-gguf", "local-ai-torch", "maps", "math", "mcp-client", "media", "messaging", "meta-labels", "meta-logging", "meta-sdk-py", "meta-sdk-rs", "meta-sdk-ts", "metadata", "oauth-consumer", "oauth-provider", "observability", "payment", "privacy", "proxy-auth-consumer", "proxy-auth-provider", "quota", "radius-consumer", "radius-provider", "saml-consumer", "saml-provider", "scim-consumer", "scim-provider", "secret-vault", "sms", "social", "source", "wearable", "webauthn-consumer", "webauthn-provider", "webhooks", "websearch", "wiki", "x509-consumer", "x509-provider", "all", "dev"]
+provides-extras = ["cache", "mcp-server", "acl-rbac", "agreements", "ai", "ai-agents", "ai-chains", "ai-memories", "ai-prompts", "ai-tuning", "audit-retention", "auth-api-keys", "auth-device-pairing", "auth-invitations", "auth-lockout", "auth-magic-link", "auth-marketplace", "auth-merge", "auth-mfa", "auth-notifications", "auth-privacy", "auth-recovery-questions", "auth-session", "automotive", "backup-restore", "billing", "book", "cad", "calendar", "cloud", "contacts", "conversations", "crypto", "database", "database-memory", "ecommerce", "email", "entitlements", "erp", "fdm-sla-printing", "federation", "fileio", "forward-auth-consumer", "forward-auth-provider", "genealogy", "gifts", "health", "kerberos-consumer", "kerberos-provider", "ldap-consumer", "ldap-provider", "live-sync", "local-ai", "local-ai-gguf", "local-ai-torch", "maps", "math", "mcp-client", "media", "messaging", "meta-labels", "meta-logging", "meta-sdk-py", "meta-sdk-rs", "meta-sdk-ts", "metadata", "oauth-consumer", "oauth-provider", "observability", "payment", "privacy", "proxy-auth-consumer", "proxy-auth-provider", "quota", "radius-consumer", "radius-provider", "rota", "saml-consumer", "saml-provider", "scim-consumer", "scim-provider", "secret-vault", "sms", "social", "source", "wearable", "webauthn-consumer", "webauthn-provider", "webhooks", "websearch", "wiki", "x509-consumer", "x509-provider", "all", "dev"]
