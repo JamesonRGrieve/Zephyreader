@@ -86,6 +86,7 @@ export default function ScriptEditor({ script, capabilities, write, rewrite, wor
   });
 
   // Saves itself when typing pauses.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changes is the trigger: each edit restarts the pause timer; the save itself reads the latest draft through saveNow.
   useEffect(() => {
     if (!canSave) return undefined;
     const timer = setTimeout(() => void saveNow.current(), AUTOSAVE_DELAY_MS);

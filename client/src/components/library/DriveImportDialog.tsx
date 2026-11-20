@@ -29,6 +29,7 @@ export default function DriveImportDialog({ open, list, onPick, onClose }: Drive
   /** Bumped by Retry, so the same search is asked again. */
   const [attempt, setAttempt] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt is the trigger: Try again bumps it to ask the same search again.
   useEffect(() => {
     if (!open) return undefined;
     let current = true;
@@ -63,11 +64,7 @@ export default function DriveImportDialog({ open, list, onPick, onClose }: Drive
         />
         <div className='max-h-80 overflow-y-auto'>
           {problem !== null ? (
-            <LoadProblem
-              what='your Drive files'
-              error={problem}
-              onRetry={async () => setAttempt((count) => count + 1)}
-            />
+            <LoadProblem what='your Drive files' error={problem} onRetry={async () => setAttempt((count) => count + 1)} />
           ) : files === null ? (
             <SkeletonRows rows={4} label='Loading your files…' />
           ) : files.length === 0 ? (

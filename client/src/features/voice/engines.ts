@@ -44,9 +44,9 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 /** The browser's SpeechRecognition constructor, where it has one. */
 function speechRecognition(): SpeechRecognitionConstructor | null {
-  const constructor: unknown =
+  const recognition: unknown =
     Reflect.get(globalThis, 'SpeechRecognition') ?? Reflect.get(globalThis, 'webkitSpeechRecognition');
-  return typeof constructor === 'function' ? (constructor as SpeechRecognitionConstructor) : null;
+  return typeof recognition === 'function' ? (recognition as SpeechRecognitionConstructor) : null;
 }
 
 export function browserEngineAvailable(): boolean {

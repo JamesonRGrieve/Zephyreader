@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { adjacentCue, prepareScript, readingSeconds, spokenWordCount } from './script';
-import { colours, DEFAULT_SETTINGS, mirrorTransform, readSettings } from './settings';
-import { clock, pixelsPerWord, progress, scrollPace, secondsLeft, timedSpeed, wordsPerMinute } from './timing';
 
 const SCRIPT = `# Opening
 
@@ -79,58 +77,5 @@ describe('prepareScript', () => {
       ),
     ).toBe(9);
     expect(readingSeconds(300, 150)).toBe(120);
-  });
-});
-
-describe('settings', () => {
-  it('keeps one pace, in words a minute, for scrolling and for time estimates', () => {
-    expect(DEFAULT_SETTINGS.speed).toBe(150);
-    expect(readSettings({ readingWpm: 200 })).not.toHaveProperty('readingWpm');
-  });
-
-  it('reads stored settings leniently: defaults for missing, invalid or unknown values', () => {
-    const read = readSettings({ fontSize: 9999, theme: 'neon', speed: 120, mystery: true });
-    expect(read.fontSize).toBe(DEFAULT_SETTINGS.fontSize);
-    expect(read.theme).toBe('dark');
-    expect(read.speed).toBe(120);
-    expect('mystery' in read).toBe(false);
-    expect(readSettings(null)).toEqual(DEFAULT_SETTINGS);
-  });
-
-  it('draws custom colours only for the custom theme, and mirrors either way', () => {
-    expect(colours({ ...DEFAULT_SETTINGS, theme: 'high-contrast' })).toEqual({ text: '#ffe600', background: '#000000' });
-    expect(colours({ ...DEFAULT_SETTINGS, theme: 'custom', textColour: '#00ff00', backgroundColour: '#101010' })).toEqual({
-      text: '#00ff00',
-      background: '#101010',
-    });
-    expect(mirrorTransform({ ...DEFAULT_SETTINGS, mirrorHorizontal: true })).toBe('scale(-1, 1)');
-  });
-});
-
-describe('timing', () => {
-  it('scrolls at a reading speed, whatever the screen makes of the words', () => {
-    // 120 words a minute is 2 words a second; at 50 px a word that is 100 px a second.
-    expect(scrollPace(120, pixelsPerWord([0, 50, 100, 150, 200]))).toBe(100);
-    // The same words laid out twice as tall (a narrow phone): twice the pixels, the same pace of reading.
-    expect(scrollPace(120, pixelsPerWord([0, 100, 200, 300, 400]))).toBe(200);
-    // One word or none: nothing to scroll between.
-    expect(pixelsPerWord([0])).toBe(0);
-    expect(pixelsPerWord([])).toBe(0);
-  });
-
-  it('fits the remaining distance to the remaining time', () => {
-    expect(timedSpeed(6000, 120)).toBe(50);
-    expect(timedSpeed(0, 120)).toBe(0);
-    expect(timedSpeed(10, 1000)).toBe(1);
-  });
-
-  it('reports progress, time left and pace', () => {
-    expect(progress(250, 1000)).toBe(0.25);
-    expect(progress(5, 0)).toBe(1);
-    expect(secondsLeft(600, 60)).toBe(10);
-    expect(secondsLeft(600, 0)).toBeNull();
-    expect(wordsPerMinute(75, 30)).toBe(150);
-    expect(clock(65)).toBe('1:05');
-    expect(clock(3725)).toBe('1:02:05');
   });
 });

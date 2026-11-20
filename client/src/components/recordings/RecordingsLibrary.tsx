@@ -75,6 +75,7 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
       <ul className='grid gap-4 sm:grid-cols-2'>
         {shown.map((recording) => (
           <li key={recording.id} className='flex flex-col gap-3 rounded-lg border p-4'>
+            {/* biome-ignore lint/a11y/useMediaCaption: the captions track is rendered whenever the take has captions (below); a take without them has no file to point one at, and Make captions makes it. */}
             <video
               controls
               preload='metadata'

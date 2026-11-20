@@ -74,7 +74,7 @@ export function wordAt(offsets: readonly number[], y: number): number | null {
 }
 
 export function usePrompterScroll(
-  containerRef: RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLElement | null>,
   script: PreparedScript,
   settings: PrompterSettings,
   isMain: boolean,
@@ -133,6 +133,7 @@ export function usePrompterScroll(
   }, [isMain]);
 
   // Re-measure whenever the words or their layout change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the script and layout settings are the triggers; measure() reads them from the page, not from these values.
   useEffect(() => {
     const element = containerRef.current;
     if (element === null) return undefined;

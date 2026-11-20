@@ -48,7 +48,7 @@ const Words = memo(function Words({ script }: { script: PreparedScript }) {
  * scrollTop), drawn in the presenter's colours, font and size, mirrored for a
  * beam-splitter rig, with the eye line marked and the word on it highlighted.
  */
-const PrompterSurface = forwardRef<HTMLDivElement, PrompterSurfaceProps>(function PrompterSurface(
+const PrompterSurface = forwardRef<HTMLElement, PrompterSurfaceProps>(function PrompterSurface(
   { script, settings, readingWord, onManualScroll },
   ref,
 ) {
@@ -68,8 +68,10 @@ const PrompterSurface = forwardRef<HTMLDivElement, PrompterSurfaceProps>(functio
   };
   return (
     <div className='relative h-full w-full overflow-hidden' style={{ backgroundColor: background }}>
-      <div
+      {/* A named section is a region: one the keyboard can reach and scroll (WCAG 2.1.1; axe scrollable-region-focusable). */}
+      <section
         ref={ref}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must take focus so the keyboard can scroll it (WCAG 2.1.1).
         tabIndex={0}
         aria-label='Script'
         onWheel={onManualScroll}
@@ -88,7 +90,7 @@ const PrompterSurface = forwardRef<HTMLDivElement, PrompterSurfaceProps>(functio
         {settings.highlightReadingLine && readingWord !== null && (
           <style>{`[data-word="${readingWord}"] { text-decoration: underline; text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }`}</style>
         )}
-      </div>
+      </section>
       {settings.eyeLine && (
         <div
           aria-hidden

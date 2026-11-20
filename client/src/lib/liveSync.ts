@@ -183,4 +183,5 @@ export class LiveHub {
 
 // One hub per server process, kept across dev-server module reloads.
 const globalHub = globalThis as typeof globalThis & { zephyreaderLiveHub?: LiveHub };
-export const hub: LiveHub = (globalHub.zephyreaderLiveHub ??= new LiveHub());
+globalHub.zephyreaderLiveHub ??= new LiveHub();
+export const hub: LiveHub = globalHub.zephyreaderLiveHub;

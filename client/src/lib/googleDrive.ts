@@ -7,7 +7,7 @@
  * and acts only with the signed-in user's own Google token.
  */
 import { z } from 'zod';
-import { ApiError, recordError } from '~/lib/apiErrors';
+import { type ApiError, recordError } from '~/lib/apiErrors';
 import { decryptSecret, encryptSecret } from '~/lib/auth/crypto';
 import { googleProvider, requestTokens } from '~/lib/auth/oauth';
 import { prisma } from '~/lib/prisma';

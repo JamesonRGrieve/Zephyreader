@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import { apiErrorResponse, recordError } from '~/lib/apiErrors';
 import { authenticate } from '~/lib/auth/session';
 import { hub, KEEPALIVE_MS, MAX_LABEL_LENGTH, validName, type LiveSink } from '~/lib/liveSync';

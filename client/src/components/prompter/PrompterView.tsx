@@ -136,7 +136,7 @@ function ToolbarButton({
 export default function PrompterView(props: PrompterViewProps) {
   const { script, settings, capabilities } = props;
   const prepared = useMemo(() => prepareScript(script.content), [script.content]);
-  const surfaceRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = useRef<HTMLElement>(null);
   const [isMain, setIsMain] = useState(true);
   const scroll = usePrompterScroll(surfaceRef, prepared, settings, isMain);
   const [panel, setPanel] = useState<Panel>(null);
@@ -144,7 +144,7 @@ export default function PrompterView(props: PrompterViewProps) {
   const [connected, setConnected] = useState(true);
   const [voiceProblem, setVoiceProblem] = useState<string | null>(null);
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
-  const pipSurfaceRef = useRef<HTMLDivElement>(null);
+  const pipSurfaceRef = useRef<HTMLElement>(null);
   const channel = useRef<LiveChannel | null>(null);
   // Whether the channel names this display the leader, as of its last presence message (not
   // until the first one arrives): a leader never follows another display's position.
@@ -321,6 +321,7 @@ export default function PrompterView(props: PrompterViewProps) {
 
   // The leading display tells the others where it is, and remotes what it is doing; again
   // whenever a device joins, so a display opened late is put where the leader already is.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deviceIds is the trigger: a device joining restarts the broadcast so it hears where the leader is.
   useEffect(() => {
     if (!leadsOthers || !capabilities.liveSync) return undefined;
     let lastRatio = -1;
@@ -493,7 +494,7 @@ export default function PrompterView(props: PrompterViewProps) {
             <ChevronsRight className='h-5 w-5' />
           </ToolbarButton>
           {settings.scrollMode === 'constant' && (
-            <span className='flex items-center gap-1' aria-label='Speed'>
+            <fieldset className='m-0 flex min-w-0 items-center gap-1 border-0 p-0' aria-label='Speed'>
               <ToolbarButton label='Slower' onClick={() => perform('slower')}>
                 <Minus className='h-4 w-4' />
               </ToolbarButton>
@@ -504,7 +505,7 @@ export default function PrompterView(props: PrompterViewProps) {
               <ToolbarButton label='Faster' onClick={() => perform('faster')}>
                 <Plus className='h-4 w-4' />
               </ToolbarButton>
-            </span>
+            </fieldset>
           )}
           <span className='ml-2 text-sm tabular-nums text-neutral-300' aria-live='off'>
             {clock(scroll.elapsed)}
