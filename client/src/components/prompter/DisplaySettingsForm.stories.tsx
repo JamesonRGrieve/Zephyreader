@@ -27,3 +27,16 @@ export const Mirrored: Story = {
     await expect(within(canvasElement).getByRole('switch', { name: 'Mirror left to right' })).toBeChecked();
   },
 };
+
+/** Short choices are chips in one radio group: the current one is checked, and the arrow keys move between them. */
+export const Chips: Story = {
+  play: async ({ canvasElement, args }) => {
+    const colours = within(within(canvasElement).getByRole('radiogroup', { name: 'Colours' }));
+    await expect(colours.getByRole('radio', { name: 'White on black' })).toBeChecked();
+    await userEvent.click(colours.getByRole('radio', { name: 'Yellow on black' }));
+    await expect(args.onChange).toHaveBeenCalledWith(expect.objectContaining({ theme: 'high-contrast' }));
+    colours.getByRole('radio', { name: 'White on black' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await expect(colours.getByRole('radio', { name: 'Black on white' })).toHaveFocus();
+  },
+};

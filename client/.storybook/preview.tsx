@@ -10,6 +10,8 @@ const preview: Preview = {
     nextjs: {
       appDirectory: true,
     },
+    // A story with an accessibility violation fails under the test-runner, not just warns.
+    a11y: { test: 'error' },
   },
 };
 
