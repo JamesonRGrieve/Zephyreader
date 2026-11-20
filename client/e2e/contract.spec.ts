@@ -136,6 +136,42 @@ test.describe('the shared contract', () => {
     await ada.context.close();
   });
 
+  test('a body that is not JSON, not an object, or missing is answered as the framework does, on both back ends', async ({ browser }, testInfo) => {
+    const ada = await signedInPerson(browser, testInfo);
+    // Sent raw from the page: `call` would encode it as JSON.
+    const answer = await ada.page.evaluate(async () => {
+      const token = document.cookie.match(/(?:^|; )zx_csrf=([^;]*)/)?.[1] ?? '';
+      const response = await fetch('/api/v1/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': decodeURIComponent(token) },
+        body: '{"script": {"title": ',
+      });
+      return { status: response.status, body: (await response.json()) as unknown };
+    });
+    expect(answer).toEqual({ status: 400, body: { detail: 'Invalid JSON syntax in request body' } });
+    // JSON that isn't an object, and no body at all, are the framework's 422 validation lists.
+    const array = await call(ada.page, 'POST', '/v1/script', ['not', 'a', 'record']);
+    expect(array.status()).toBe(422);
+    expect(await array.json()).toEqual({
+      detail: [{ type: 'dict_type', loc: ['body'], msg: 'Input should be a valid dictionary', input: ['not', 'a', 'record'] }],
+    });
+    const empty = await ada.page.evaluate(async () => {
+      const token = document.cookie.match(/(?:^|; )zx_csrf=([^;]*)/)?.[1] ?? '';
+      const response = await fetch('/api/v1/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': decodeURIComponent(token) },
+      });
+      return { status: response.status, body: (await response.json()) as unknown };
+    });
+    expect(empty).toEqual({
+      status: 422,
+      body: {
+        detail: [{ type: 'missing', loc: ['body'], msg: 'Field required', input: null, ctx: { error: 'Field required' } }],
+      },
+    });
+    await ada.context.close();
+  });
+
   test('the shared limits hold the same on both back ends (contract/teleprompter.json)', async ({ browser }, testInfo) => {
     const { limits } = contract;
     const ada = await signedInPerson(browser, testInfo);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '~/lib/apiErrors';
-import { MAX_BODY_BYTES, readJsonObject } from './requestBody';
+import { INVALID_JSON, MAX_BODY_BYTES, readJsonObject } from './requestBody';
 
 const TOO_LARGE = 'Request body exceeds maximum allowed size';
 
@@ -38,10 +38,31 @@ describe('readJsonObject', () => {
     });
   });
 
-  it('refuses anything but a JSON object with 422', async () => {
-    for (const body of ['[1]', 'null', 'not json', '']) {
+  it('refuses a missing body with the framework 422 list, as the real server answers it', async () => {
+    const error = await refusal(readJsonObject(new Request('http://localhost', { method: 'POST', body: '' })));
+    expect(error.status).toBe(422);
+    expect(error.detail).toEqual([
+      { type: 'missing', loc: ['body'], msg: 'Field required', input: null, ctx: { error: 'Field required' } },
+    ]);
+  });
+
+  it('refuses JSON that is not an object with the framework 422 list', async () => {
+    for (const [body, input] of [
+      ['[1]', [1]],
+      ['null', null],
+      ['"text"', 'text'],
+    ] as const) {
       const error = await refusal(readJsonObject(new Request('http://localhost', { method: 'POST', body })));
       expect(error.status).toBe(422);
+      expect(error.detail).toEqual([{ type: 'dict_type', loc: ['body'], msg: 'Input should be a valid dictionary', input }]);
+    }
+  });
+
+  it('refuses a body that is not JSON with the framework 400', async () => {
+    for (const body of ['not json', '{"a":', '{a:1}']) {
+      const error = await refusal(readJsonObject(new Request('http://localhost', { method: 'POST', body })));
+      expect(error.status).toBe(400);
+      expect(error.detail).toBe(INVALID_JSON);
     }
   });
 

@@ -2,11 +2,16 @@
 import { NextResponse } from 'next/server';
 
 /**
- * An error's `detail`, in the two shapes server-framework answers with: a plain string
- * (authentication, `428 If-Match required`) or its envelope `{ message, code?, errors? }`
- * (records not found, conflicts, validation), plus the structured 402 bodies.
+ * An error's `detail`, in the shapes server-framework answers with: a plain string
+ * (authentication, `428 If-Match required`, malformed JSON), its envelope
+ * `{ message, code?, errors? }` (records not found, conflicts, validation), FastAPI's list of
+ * validation errors (a missing body, a body that isn't an object), and the structured 402 bodies.
  */
-export type ErrorDetail = string | { message: string; code?: string; errors?: unknown[] } | Record<string, unknown>;
+export type ErrorDetail =
+  | string
+  | { message: string; code?: string; errors?: unknown[] }
+  | Record<string, unknown>
+  | Record<string, unknown>[];
 
 /** An error whose status and `detail` are safe to show the client. */
 export class ApiError extends Error {

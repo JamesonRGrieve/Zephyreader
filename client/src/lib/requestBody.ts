@@ -37,18 +37,35 @@ async function readCapped(request: Request): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-/** Parses a JSON request body into an object, or fails with the server-framework 422 (413 when too large). */
+/** What server-framework answers for a body that isn't JSON at all (FastAPI's `json_invalid`, made a 400). */
+export const INVALID_JSON = 'Invalid JSON syntax in request body';
+
+/** server-framework's 422 for a missing body: FastAPI's validation list, as a probe of the real server gave it. */
+export function missingBody(): ApiError {
+  return new ApiError(422, [
+    { type: 'missing', loc: ['body'], msg: 'Field required', input: null, ctx: { error: 'Field required' } },
+  ]);
+}
+
+/** server-framework's 422 for a body that is JSON but not an object. */
+export function notAnObject(input: unknown): ApiError {
+  return new ApiError(422, [{ type: 'dict_type', loc: ['body'], msg: 'Input should be a valid dictionary', input }]);
+}
+
+/**
+ * Parses a JSON request body into an object, answering as server-framework does: 400 when the
+ * body isn't JSON, 422 when it is missing or is JSON but not an object, 413 when too large.
+ */
 export async function readJsonObject(request: Request): Promise<object> {
   const text = await readCapped(request);
-  let body: unknown = null;
+  if (text.trim() === '') throw missingBody();
+  let body: unknown;
   try {
     body = JSON.parse(text);
   } catch {
-    body = null;
+    throw new ApiError(400, INVALID_JSON);
   }
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    throw new ApiError(422, 'Request body must be a JSON object');
-  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) throw notAnObject(body);
   return body;
 }
 
