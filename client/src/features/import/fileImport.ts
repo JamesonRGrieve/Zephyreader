@@ -39,18 +39,22 @@ export function titleOf(name: string): string {
 /** RTF as plain text: control words, groups and escapes removed, paragraphs kept. */
 export function rtfToText(rtf: string): string {
   if (!rtf.trimStart().startsWith('{\\rtf')) throw new ImportError('This is not an RTF document');
-  return rtf
-    .replace(/\{\\\*[^{}]*\}/g, '')
-    .replace(/\\par[d]?\b/g, '\n')
-    .replace(/\\'([0-9a-fA-F]{2})/g, (_match, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-    .replace(/\\u(-?\d+)\??/g, (_match, code: string) =>
-      String.fromCharCode(Number(code) < 0 ? Number(code) + 65536 : Number(code)),
-    )
-    .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
-    .replace(/\\([{}\\])/g, '$1')
-    .replace(/[{}]/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return (
+    rtf
+      .replace(/\{\\\*[^{}]*\}/g, '')
+      // A control word's delimiting space is part of it, not of the text.
+      .replace(/\\pard?\b ?/g, '\n')
+      .replace(/\\'([0-9a-fA-F]{2})/g, (_match, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\u(-?\d+)\??/g, (_match, code: string) =>
+        String.fromCharCode(Number(code) < 0 ? Number(code) + 65536 : Number(code)),
+      )
+      .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
+      // Group braces go before escapes are undone, so an escaped \{ or \} stays in the text.
+      .replace(/(?<!\\)[{}]/g, '')
+      .replace(/\\([{}\\])/g, '$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  );
 }
 
 async function docxToMarkdown(buffer: ArrayBuffer): Promise<string> {
