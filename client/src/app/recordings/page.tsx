@@ -1,6 +1,8 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { RequireFeature } from 'zephyrex';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { AppPage } from '~/components/common/AppPage';
 import RecordingsLibrary from '~/components/recordings/RecordingsLibrary';
 import { PAID_FEATURES, useCapabilities } from '~/features/capabilities';
@@ -21,11 +23,9 @@ export default function RecordingsPage() {
       ) : (
         <RequireFeature feature={PAID_FEATURES.cloudRecordings} title='Cloud recordings'>
           {recordings.error !== undefined ? (
-            <p role='alert' className='text-destructive'>
-              Your recordings couldn&apos;t be loaded: {recordings.error.message}
-            </p>
+            <LoadProblem what='your recordings' error={recordings.error} onRetry={() => recordings.mutate()} />
           ) : recordings.data === undefined ? (
-            <p className='text-muted-foreground'>Loading your recordings…</p>
+            <SkeletonRows rows={3} label='Loading your recordings…' />
           ) : (
             <RecordingsLibrary
               recordings={recordings.data}

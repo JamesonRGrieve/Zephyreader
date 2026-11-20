@@ -1,8 +1,11 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
-import { toast } from 'zephyrex/hooks/useToast';
+import { writeProblem } from 'zephyrex';
+import { notify } from 'zephyrex/hooks/useToast';
 import { Button } from 'zephyrex/ui/button';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { AppPage } from '~/components/common/AppPage';
 import DisplaySettingsForm from '~/components/prompter/DisplaySettingsForm';
 import ScrollSettingsForm from '~/components/prompter/ScrollSettingsForm';
@@ -25,23 +28,17 @@ export default function SettingsPage() {
   const draft = saved.loaded ? (edited ?? saved.settings) : null;
   const setDraft = setEdited;
   const [saving, setSaving] = useState(false);
+  /** Why the last save failed, shown beside the button until the next one. */
+  const [problem, setProblem] = useState<string | null>(null);
   const serverVoice = capabilities.plans && capabilities.unlocked(PAID_FEATURES.serverVoice);
 
   const save = async () => {
     if (draft === null) return;
     setSaving(true);
-    try {
-      await saved.save(draft);
-      toast({ title: 'Settings saved' });
-    } catch (error) {
-      toast({
-        title: "Couldn't save your settings",
-        description: error instanceof Error ? error.message : undefined,
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
+    const failed = await writeProblem(saved.save(draft), "Couldn't save your settings");
+    setProblem(failed === null ? null : `Couldn't save your settings: ${failed}`);
+    if (failed === null) notify('Settings saved');
+    setSaving(false);
   };
 
   return (
@@ -50,8 +47,10 @@ export default function SettingsPage() {
       <p className='text-muted-foreground mb-8'>
         How the prompter opens on every device you use. You can change them while presenting too.
       </p>
-      {draft === null ? (
-        <p className='text-muted-foreground'>Loading your settings…</p>
+      {saved.error !== undefined ? (
+        <LoadProblem what='your settings' error={saved.error} onRetry={saved.retry} />
+      ) : draft === null ? (
+        <SkeletonRows rows={4} label='Loading your settings…' />
       ) : (
         <div className='flex flex-col gap-10'>
           <section aria-labelledby='display-heading' className='flex flex-col gap-4'>
@@ -84,10 +83,17 @@ export default function SettingsPage() {
               }}
             />
           </section>
-          <div>
-            <Button onClick={() => void save()} disabled={saving}>
-              {saving ? 'Saving…' : 'Save settings'}
-            </Button>
+          <div className='flex flex-col gap-2'>
+            <div>
+              <Button onClick={() => void save()} disabled={saving}>
+                {saving ? 'Saving…' : 'Save settings'}
+              </Button>
+            </div>
+            {problem !== null && (
+              <p role='alert' className='text-destructive text-sm'>
+                {problem}
+              </p>
+            )}
           </div>
           <section aria-labelledby='keys-heading' className='flex flex-col gap-3'>
             <h2 id='keys-heading' className='text-xl font-semibold'>

@@ -1,9 +1,10 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useId, type ReactNode } from 'react';
+import { chipGroup } from 'zephyrex/hooks/chipKeys';
+import { ChoiceChip } from 'zephyrex/ui/choice-chip';
 import { Input } from 'zephyrex/ui/input';
 import { Label } from 'zephyrex/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'zephyrex/ui/select';
 import { Slider } from 'zephyrex/ui/slider';
 import { Switch } from 'zephyrex/ui/switch';
 import {
@@ -56,8 +57,41 @@ function Row({ label, htmlFor, children, value }: { label: string; htmlFor: stri
   );
 }
 
-function pick<T extends string>(options: readonly T[], value: string, fallback: T): T {
-  return options.find((option) => option === value) ?? fallback;
+/** A short set of choices, all in view: chips that read as one radio group, moved through with the arrow keys. */
+function Choices<T extends string>({
+  label,
+  options,
+  labels,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly T[];
+  labels: Record<T, string>;
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const labelId = useId();
+  return (
+    <div className='flex flex-col gap-2'>
+      <span id={labelId} className='text-sm font-medium leading-none'>
+        {label}
+      </span>
+      <div role='radiogroup' aria-labelledby={labelId} className='flex flex-wrap gap-1.5' ref={chipGroup}>
+        {options.map((option) => (
+          <ChoiceChip
+            key={option}
+            checked={value === option}
+            // Choosing the chosen one again keeps it: every setting here always has a value.
+            onClick={() => onChange(option)}
+            className='rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-foreground'
+          >
+            {labels[option]}
+          </ChoiceChip>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /** How the prompter looks: size, font, spacing, colours, mirroring, eye line and countdown. */
@@ -91,54 +125,33 @@ export default function DisplaySettingsForm({ settings, onChange }: DisplaySetti
       <Row label='Text size' htmlFor={`${id}-fontSize`} value={`${settings.fontSize}px`}>
         {slider('fontSize', FONT_SIZE)}
       </Row>
-      <Row label='Font' htmlFor={`${id}-font`}>
-        <Select value={settings.fontFamily} onValueChange={(value) => set('fontFamily', pick(FONT_FAMILIES, value, 'sans'))}>
-          <SelectTrigger id={`${id}-font`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FONT_FAMILIES.map((font) => (
-              <SelectItem key={font} value={font}>
-                {FONT_LABELS[font]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Row>
+      <Choices
+        label='Font'
+        options={FONT_FAMILIES}
+        labels={FONT_LABELS}
+        value={settings.fontFamily}
+        onChange={(value) => set('fontFamily', value)}
+      />
       <Row label='Line spacing' htmlFor={`${id}-lineHeight`} value={settings.lineHeight.toFixed(2)}>
         {slider('lineHeight', LINE_HEIGHT)}
       </Row>
       <Row label='Side margins' htmlFor={`${id}-marginPercent`} value={`${settings.marginPercent}%`}>
         {slider('marginPercent', MARGIN_PERCENT)}
       </Row>
-      <Row label='Alignment' htmlFor={`${id}-align`}>
-        <Select value={settings.align} onValueChange={(value) => set('align', pick(ALIGNMENTS, value, 'left'))}>
-          <SelectTrigger id={`${id}-align`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ALIGNMENTS.map((align) => (
-              <SelectItem key={align} value={align}>
-                {ALIGN_LABELS[align]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Row>
-      <Row label='Colours' htmlFor={`${id}-theme`}>
-        <Select value={settings.theme} onValueChange={(value) => set('theme', pick(THEMES, value, 'dark'))}>
-          <SelectTrigger id={`${id}-theme`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {THEMES.map((theme) => (
-              <SelectItem key={theme} value={theme}>
-                {THEME_LABELS[theme]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Row>
+      <Choices
+        label='Alignment'
+        options={ALIGNMENTS}
+        labels={ALIGN_LABELS}
+        value={settings.align}
+        onChange={(value) => set('align', value)}
+      />
+      <Choices
+        label='Colours'
+        options={THEMES}
+        labels={THEME_LABELS}
+        value={settings.theme}
+        onChange={(value) => set('theme', value)}
+      />
       {settings.theme === 'custom' && (
         <div className='grid grid-cols-2 gap-4'>
           <Row label='Text' htmlFor={`${id}-text`}>

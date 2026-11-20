@@ -6,6 +6,8 @@ import { serverInstant } from 'zephyrex';
 import { Button } from 'zephyrex/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from 'zephyrex/ui/dialog';
 import { Input } from 'zephyrex/ui/input';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { formatDay } from '~/lib/dates';
 import type { CloudFile } from '~/features/data/records';
 
@@ -23,26 +25,27 @@ export interface DriveImportDialogProps {
 export default function DriveImportDialog({ open, list, onPick, onClose }: DriveImportDialogProps) {
   const [search, setSearch] = useState('');
   const [files, setFiles] = useState<CloudFile[] | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Error | null>(null);
+  /** Bumped by Retry, so the same search is asked again. */
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!open) return undefined;
     let current = true;
     const timer = setTimeout(() => {
       setProblem(null);
+      setFiles(null);
       list(search)
         .then((found) => current && setFiles(found.filter((file) => !file.is_folder)))
         .catch((error: unknown) => {
-          if (!current) return;
-          setFiles([]);
-          setProblem(error instanceof Error ? error.message : 'Google Drive did not answer');
+          if (current) setProblem(error instanceof Error ? error : new Error('Google Drive did not answer'));
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [open, search, list]);
+  }, [open, search, list, attempt]);
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -58,16 +61,19 @@ export default function DriveImportDialog({ open, list, onPick, onClose }: Drive
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        {problem !== null && (
-          <p role='status' className='text-destructive text-sm'>
-            {problem}
-          </p>
-        )}
         <div className='max-h-80 overflow-y-auto'>
-          {files === null ? (
-            <p className='text-muted-foreground p-4 text-sm'>Loading your files…</p>
-          ) : files.length === 0 && problem === null ? (
-            <p className='text-muted-foreground p-4 text-sm'>No documents found.</p>
+          {problem !== null ? (
+            <LoadProblem
+              what='your Drive files'
+              error={problem}
+              onRetry={async () => setAttempt((count) => count + 1)}
+            />
+          ) : files === null ? (
+            <SkeletonRows rows={4} label='Loading your files…' />
+          ) : files.length === 0 ? (
+            <p className='text-muted-foreground p-4 text-sm'>
+              {search === '' ? 'No Docs or text files in your Drive yet.' : `Nothing in your Drive matches "${search}".`}
+            </p>
           ) : (
             <ul className='divide-border divide-y'>
               {files.map((file) => (

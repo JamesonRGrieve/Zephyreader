@@ -40,3 +40,21 @@ if (typeof window !== 'undefined') {
     }),
   });
 }
+
+// jsdom has no pointer capture; Radix's toast (an Undo notice) asks for it when a swipe starts.
+if (typeof Element !== 'undefined') {
+  const element: Partial<Element> = Element.prototype;
+  element.hasPointerCapture ??= () => false;
+  element.setPointerCapture ??= () => undefined;
+  element.releasePointerCapture ??= () => undefined;
+}
+
+// jsdom has no ResizeObserver; Radix's slider (the prompter settings) measures itself with one.
+if (typeof window !== 'undefined' && !('ResizeObserver' in window)) {
+  class ResizeObserverStub {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  Object.defineProperty(window, 'ResizeObserver', { writable: true, value: ResizeObserverStub });
+}

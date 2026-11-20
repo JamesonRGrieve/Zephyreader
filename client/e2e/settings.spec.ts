@@ -7,13 +7,14 @@ import { signedInPerson } from './support/people';
 test('a saved colour theme is what the prompter opens with', async ({ browser }, testInfo) => {
   const { page, context } = await signedInPerson(browser, testInfo);
   await page.goto('/settings');
-  await page.getByLabel('Colours').click();
-  await page.getByRole('option', { name: 'Yellow on black' }).click();
+  await page.getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name: 'Yellow on black' }).click();
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByText('Settings saved').first()).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel('Colours')).toContainText('Yellow on black');
+  await expect(
+    page.getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name: 'Yellow on black' }),
+  ).toBeChecked();
 
   const script = await makeScript(page, 'Settings test', 'Hello there, everyone.');
   await page.goto(`/present/${script.id}`);

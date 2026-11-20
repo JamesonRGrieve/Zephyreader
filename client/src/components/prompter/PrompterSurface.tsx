@@ -28,7 +28,7 @@ const Words = memo(function Words({ script }: { script: PreparedScript }) {
         return (
           <Tag
             key={block.words[0].index}
-            className={block.kind === 'heading' ? 'mb-[0.6em] mt-[1.2em] font-bold opacity-80' : 'mb-[1em]'}
+            className={block.kind === 'heading' ? 'mb-[0.6em] mt-[1.2em] font-bold' : 'mb-[1em]'}
             data-cue={block.cue ? 'true' : undefined}
           >
             {block.words.map((word) => (

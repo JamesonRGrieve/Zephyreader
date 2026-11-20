@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Captions, Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { serverInstant, useClient } from 'zephyrex';
-import { toast } from 'zephyrex/hooks/useToast';
+import { serverInstant, useClient, writeProblem } from 'zephyrex';
+import { deferWithUndo, notify } from 'zephyrex/hooks/useToast';
 import { Button } from 'zephyrex/ui/button';
-import ConfirmDialog from '~/components/common/ConfirmDialog';
 import { PAID_FEATURES, type Capabilities } from '~/features/capabilities';
 import { RECORDINGS_KEY, type Recording } from '~/features/data/records';
 import { clock } from '~/features/prompter/timing';
@@ -21,29 +20,60 @@ export interface RecordingsLibraryProps {
 /** The takes kept in the cloud: watch them, caption them, download or delete them. */
 export default function RecordingsLibrary({ recordings, capabilities, onChanged }: RecordingsLibraryProps) {
   const client = useClient();
-  const [deleting, setDeleting] = useState<Recording | null>(null);
   const [captioning, setCaptioning] = useState<string | null>(null);
+  /** Why the last change failed, shown in place until the next one; null when it went through. */
+  const [problem, setProblem] = useState<string | null>(null);
+  /** Takes deleted on screen whose deletion can still be taken back. */
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const canCaption = capabilities.unlocked(PAID_FEATURES.captions);
+  const shown = recordings.filter((recording) => !hidden.has(recording.id));
+
+  const show = (id: string, visible: boolean) =>
+    setHidden((current) => {
+      const next = new Set(current);
+      if (visible) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const caption = async (recording: Recording) => {
     setCaptioning(recording.id);
-    try {
-      await client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {});
-      await onChanged();
-    } catch (error) {
-      toast({
-        title: "Couldn't caption the take",
-        description: error instanceof Error ? error.message : undefined,
-        variant: 'destructive',
-      });
-    } finally {
-      setCaptioning(null);
-    }
+    const failed = await writeProblem(
+      client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {}),
+      "Couldn't caption the take",
+    );
+    setProblem(failed === null ? null : `Couldn't caption the take: ${failed}`);
+    if (failed === null) notify('Captions made');
+    await onChanged();
+    setCaptioning(null);
   };
 
-  if (recordings.length === 0) {
+  /** Deletes at once on screen, and on the server once the Undo notice has gone. */
+  const remove = (recording: Recording) => {
+    show(recording.id, false);
+    deferWithUndo(
+      `"${recording.title}" deleted`,
+      () =>
+        void writeProblem(client.delete(`${RECORDINGS_KEY}/${recording.id}`, recording), "Couldn't delete the take")
+          .then((failed) => {
+            setProblem(failed === null ? null : `Couldn't delete the take: ${failed}`);
+            return onChanged();
+          })
+          .finally(() => show(recording.id, true)),
+      () => show(recording.id, true),
+    );
+  };
+
+  const problemNotice = problem !== null && (
+    <p role='alert' className='text-destructive mb-4 text-sm'>
+      {problem}
+    </p>
+  );
+
+  if (shown.length === 0) {
     return (
       <section aria-label='Your recordings'>
+        {problemNotice}
         <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
           No recordings yet. Record a take from the prompter.
         </p>
@@ -53,8 +83,9 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
 
   return (
     <section aria-label='Your recordings'>
+      {problemNotice}
       <ul className='grid gap-4 sm:grid-cols-2'>
-        {recordings.map((recording) => (
+        {shown.map((recording) => (
           <li key={recording.id} className='flex flex-col gap-3 rounded-lg border p-4'>
             <video
               controls
@@ -114,7 +145,7 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
               <Button
                 size='sm'
                 variant='ghost'
-                onClick={() => setDeleting(recording)}
+                onClick={() => remove(recording)}
                 aria-label={`Delete ${recording.title}`}
               >
                 <Trash2 className='h-4 w-4' aria-hidden />
@@ -129,28 +160,6 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
           </li>
         ))}
       </ul>
-      <ConfirmDialog
-        open={deleting !== null}
-        title='Delete this take?'
-        description='The video and its captions will be gone for good.'
-        confirm='Delete'
-        onClose={() => setDeleting(null)}
-        onConfirm={() => {
-          const target = deleting;
-          setDeleting(null);
-          if (target === null) return;
-          void client
-            .delete(`${RECORDINGS_KEY}/${target.id}`, target)
-            .then(onChanged)
-            .catch((error: unknown) =>
-              toast({
-                title: "Couldn't delete the take",
-                description: error instanceof Error ? error.message : undefined,
-                variant: 'destructive',
-              }),
-            );
-        }}
-      />
     </section>
   );
 }

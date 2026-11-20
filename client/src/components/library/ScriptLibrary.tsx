@@ -163,7 +163,7 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
         ) : (
           <ul className='divide-border divide-y rounded-lg border'>
             {shown.map((script) => (
-              <li key={script.id} className='flex items-center gap-3 px-3 py-3'>
+              <li key={script.id} className='group flex items-center gap-3 px-3 py-3'>
                 <button
                   type='button'
                   onClick={() => props.onToggleStar(script)}
@@ -196,7 +196,13 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant='ghost' size='icon' aria-label={`${script.title} actions`}>
+                    {/* A secondary action: shown on hover or focus with a mouse, always on touch. */}
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      aria-label={`${script.title} actions`}
+                      className='transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 data-[state=open]:opacity-100'
+                    >
                       <MoreHorizontal className='h-4 w-4' />
                     </Button>
                   </DropdownMenuTrigger>

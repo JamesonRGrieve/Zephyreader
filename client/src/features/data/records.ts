@@ -162,6 +162,9 @@ export function useRecordActions() {
 export function usePrompterSettings(): {
   settings: PrompterSettings;
   loaded: boolean;
+  /** Why the saved settings didn't load; the defaults stand in meanwhile. */
+  error: Error | undefined;
+  retry: () => Promise<unknown>;
   save: (settings: PrompterSettings) => Promise<void>;
 } {
   const client = useClient();
@@ -170,6 +173,8 @@ export function usePrompterSettings(): {
   return {
     settings: record === undefined ? DEFAULT_SETTINGS : readSettings(record.settings),
     loaded: preferences.data !== undefined || preferences.error !== undefined,
+    error: preferences.error instanceof Error ? preferences.error : undefined,
+    retry: () => preferences.mutate(),
     save: async (settings) => {
       const saved =
         record === undefined

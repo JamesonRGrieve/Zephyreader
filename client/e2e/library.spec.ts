@@ -78,13 +78,28 @@ test('folders, starring, moving, importing a file and deleting', async ({ browse
   await page.getByRole('navigation', { name: 'Folders' }).getByRole('button', { name: /Talks/ }).first().click();
   await expect(page.getByRole('listitem').filter({ hasText: 'welcome speech' })).toBeVisible();
 
-  await page
-    .getByRole('listitem')
-    .filter({ hasText: 'welcome speech' })
-    .getByRole('button', { name: 'welcome speech actions' })
-    .click();
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
-  await expect(page.getByText('welcome speech')).toHaveCount(0);
+  // A delete takes effect on screen at once and can be taken back while its notice is up.
+  // Within the scripts list: the Undo notice is a list item too, and names the script.
+  const scriptRow = page.getByRole('region', { name: 'Scripts' }).getByRole('listitem').filter({ hasText: 'welcome speech' });
+  const deleteIt = async () => {
+    await scriptRow.getByRole('button', { name: 'welcome speech actions' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(scriptRow).toHaveCount(0);
+  };
+  await deleteIt();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(scriptRow).toBeVisible();
+
+  // Left alone, it is deleted on the server once the notice has gone. Wait for that write itself:
+  // a reload as soon as the timer fires could abort it.
+  const deleted = page.waitForResponse(
+    (response) => response.request().method() === 'DELETE' && response.url().includes('/v1/script/'),
+    { timeout: 20_000 },
+  );
+  await deleteIt();
+  expect((await deleted).ok()).toBe(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Your scripts' })).toBeVisible();
+  await expect(scriptRow).toHaveCount(0);
   await context.close();
 });

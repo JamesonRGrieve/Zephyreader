@@ -27,10 +27,13 @@ export interface AiPanelProps {
   run: (request: { action: AiAction; content: string; tone?: string; language?: string }) => Promise<string>;
   /** Replaces the script with the result (the editor keeps it undoable as a normal save). */
   onResult: (content: string) => void;
+  /** The panel title's heading level, chosen by the page so its outline never skips one. */
+  headingLevel?: 2 | 3 | 4 | 5 | 6;
 }
 
 /** The script writer: write from a brief, shorten, lengthen, change tone or translate. */
-export default function AiPanel({ content, run, onResult }: AiPanelProps) {
+export default function AiPanel({ content, run, onResult, headingLevel = 2 }: AiPanelProps) {
+  const Heading = `h${headingLevel}` as const;
   const [action, setAction] = useState<AiAction>('shorten');
   const [brief, setBrief] = useState('');
   const [tone, setTone] = useState('warm and confident');
@@ -60,9 +63,9 @@ export default function AiPanel({ content, run, onResult }: AiPanelProps) {
 
   return (
     <section aria-label='AI writer' className='flex flex-col gap-3 rounded-lg border p-4'>
-      <h2 className='flex items-center gap-2 font-semibold'>
+      <Heading className='flex items-center gap-2 font-semibold'>
         <Sparkles className='h-4 w-4' aria-hidden /> AI writer
-      </h2>
+      </Heading>
       <Select
         value={action}
         onValueChange={(value) => setAction(AI_ACTIONS.find((candidate) => candidate === value) ?? 'shorten')}

@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
-import { toast } from 'zephyrex/hooks/useToast';
+import { writeProblem } from 'zephyrex';
+import { deferWithUndo, notify } from 'zephyrex/hooks/useToast';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { LIMITS } from '~/contract';
-import ConfirmDialog from '~/components/common/ConfirmDialog';
 import NameDialog from '~/components/common/NameDialog';
 import { useCapabilities } from '~/features/capabilities';
 import {
@@ -14,7 +16,6 @@ import {
   useScripts,
   type CloudFile,
   type Folder,
-  type Script,
 } from '~/features/data/records';
 import { IMPORT_ACCEPT, importFile } from '~/features/import/fileImport';
 import DriveImportDialog from './DriveImportDialog';
@@ -25,17 +26,7 @@ type Pending =
   | { kind: 'none' }
   | { kind: 'new-folder' }
   | { kind: 'rename-folder'; folder: Folder }
-  | { kind: 'delete-folder'; folder: Folder }
-  | { kind: 'delete-script'; script: Script }
   | { kind: 'drive' };
-
-function failure(error: unknown, action: string): void {
-  toast({
-    title: `Couldn't ${action}`,
-    description: error instanceof Error ? error.message : undefined,
-    variant: 'destructive',
-  });
-}
 
 /** The signed-in home page: the library, and everything done to it. */
 export default function LibraryPage() {
@@ -46,6 +37,10 @@ export default function LibraryPage() {
   const actions = useRecordActions();
   const { settings } = usePrompterSettings();
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
+  /** Why the last change failed, shown in place until the next one; null when it went through. */
+  const [problem, setProblem] = useState<string | null>(null);
+  /** Records deleted on screen whose deletion can still be taken back. */
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
   const close = () => setPending({ kind: 'none' });
 
@@ -53,10 +48,30 @@ export default function LibraryPage() {
     await Promise.all([scripts.mutate(), folders.mutate()]);
   }, [scripts, folders]);
 
-  const run = (action: string, work: () => Promise<unknown>) => {
-    void work()
-      .then(refresh)
-      .catch((error: unknown) => failure(error, action));
+  /** Runs a change, then says it was done, or why it wasn't. */
+  const run = async (action: string, done: string | null, work: () => Promise<unknown>): Promise<void> => {
+    const failed = await writeProblem(work(), `Couldn't ${action}`);
+    setProblem(failed === null ? null : `Couldn't ${action}: ${failed}`);
+    if (failed === null && done !== null) notify(done);
+    await refresh();
+  };
+
+  const show = (id: string, shown: boolean) =>
+    setHidden((current) => {
+      const next = new Set(current);
+      if (shown) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  /** Deletes at once on screen, and on the server once the Undo notice has gone. */
+  const deleteLater = (id: string, title: string, action: string, work: () => Promise<unknown>) => {
+    show(id, false);
+    deferWithUndo(
+      title,
+      () => void run(action, null, work).finally(() => show(id, true)),
+      () => show(id, true),
+    );
   };
 
   const openNew = async (fields: Parameters<typeof actions.createScript>[0]) => {
@@ -75,35 +90,34 @@ export default function LibraryPage() {
     await openNew({ title: read.name, content: read.content, source_provider: 'google_drive', source_path: read.path });
   };
 
-  if (scripts.error !== undefined || folders.error !== undefined) {
-    return (
-      <p role='alert' className='text-destructive'>
-        Your library couldn’t be loaded: {(scripts.error ?? folders.error)?.message}
-      </p>
-    );
+  const failedLoad = scripts.error ?? folders.error;
+  if (failedLoad !== undefined) {
+    return <LoadProblem what='your library' error={failedLoad} onRetry={refresh} />;
   }
   if (scripts.data === undefined || folders.data === undefined) {
-    return <p className='text-muted-foreground'>Loading your scripts…</p>;
+    return <SkeletonRows rows={4} label='Loading your scripts…' />;
   }
   const titles = scripts.data.map((script) => script.title);
 
   return (
     <>
       <ScriptLibrary
-        scripts={scripts.data}
-        folders={folders.data}
+        scripts={scripts.data.filter((script) => !hidden.has(script.id))}
+        folders={folders.data.filter((folder) => !hidden.has(folder.id))}
         googleDrive={capabilities.googleDrive}
         wordsPerMinute={settings.speed}
         onCreate={() =>
-          void openNew({ title: 'Untitled script', content: '' }).catch((error: unknown) =>
-            failure(error, 'create a script'),
-          )
+          void run('create a script', null, () => openNew({ title: 'Untitled script', content: '' }))
         }
         onImportFile={() => fileInput.current?.click()}
         onImportDrive={() => setPending({ kind: 'drive' })}
-        onToggleStar={(script) => run('star the script', () => actions.updateScript(script, { starred: !script.starred }))}
+        onToggleStar={(script) =>
+          void run('star the script', script.starred ? 'Unstarred' : 'Starred', () =>
+            actions.updateScript(script, { starred: !script.starred }),
+          )
+        }
         onDuplicate={(script) =>
-          run('duplicate the script', () =>
+          void run('duplicate the script', 'Script duplicated', () =>
             actions.createScript({
               title: copyTitle(script.title, titles),
               content: script.content,
@@ -112,13 +126,26 @@ export default function LibraryPage() {
           )
         }
         onMove={(script, folderId) =>
-          run('move the script', () => actions.updateScript(script, { script_folder_id: folderId }))
+          void run('move the script', 'Script moved', () =>
+            actions.updateScript(script, { script_folder_id: folderId }),
+          )
         }
-        onDelete={(script) => setPending({ kind: 'delete-script', script })}
+        onDelete={(script) =>
+          deleteLater(script.id, `"${script.title}" deleted`, 'delete the script', () => actions.deleteScript(script))
+        }
         onCreateFolder={() => setPending({ kind: 'new-folder' })}
         onRenameFolder={(folder) => setPending({ kind: 'rename-folder', folder })}
-        onDeleteFolder={(folder) => setPending({ kind: 'delete-folder', folder })}
+        onDeleteFolder={(folder) =>
+          deleteLater(folder.id, `Folder "${folder.name}" deleted`, 'delete the folder', () =>
+            actions.deleteFolder(folder),
+          )
+        }
       />
+      {problem !== null && (
+        <p role='alert' className='text-destructive mt-4 text-sm'>
+          {problem}
+        </p>
+      )}
       <input
         ref={fileInput}
         type='file'
@@ -128,7 +155,7 @@ export default function LibraryPage() {
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = '';
-          if (file !== undefined) void importChosenFile(file).catch((error: unknown) => failure(error, 'import the file'));
+          if (file !== undefined) void run('import the file', null, () => importChosenFile(file));
         }}
       />
       <NameDialog
@@ -142,37 +169,11 @@ export default function LibraryPage() {
         onSubmit={(name) => {
           const target = pending;
           close();
-          run(target.kind === 'rename-folder' ? 'rename the folder' : 'create the folder', () =>
-            target.kind === 'rename-folder' ? actions.renameFolder(target.folder, name) : actions.createFolder(name),
+          void run(
+            target.kind === 'rename-folder' ? 'rename the folder' : 'create the folder',
+            target.kind === 'rename-folder' ? 'Folder renamed' : 'Folder created',
+            () => (target.kind === 'rename-folder' ? actions.renameFolder(target.folder, name) : actions.createFolder(name)),
           );
-        }}
-      />
-      <ConfirmDialog
-        open={pending.kind === 'delete-script'}
-        title='Delete this script?'
-        description={pending.kind === 'delete-script' ? `"${pending.script.title}" will be gone for good.` : ''}
-        confirm='Delete'
-        onClose={close}
-        onConfirm={() => {
-          if (pending.kind === 'delete-script') {
-            const { script } = pending;
-            run('delete the script', () => actions.deleteScript(script));
-          }
-          close();
-        }}
-      />
-      <ConfirmDialog
-        open={pending.kind === 'delete-folder'}
-        title='Delete this folder?'
-        description='Its scripts stay in your library, outside any folder.'
-        confirm='Delete folder'
-        onClose={close}
-        onConfirm={() => {
-          if (pending.kind === 'delete-folder') {
-            const { folder } = pending;
-            run('delete the folder', () => actions.deleteFolder(folder));
-          }
-          close();
         }}
       />
       {capabilities.googleDrive && (
@@ -180,7 +181,7 @@ export default function LibraryPage() {
           open={pending.kind === 'drive'}
           list={actions.listDrive}
           onClose={close}
-          onPick={(file) => void importFromDrive(file).catch((error: unknown) => failure(error, 'import from Google Docs'))}
+          onPick={(file) => void run('import from Google Docs', null, () => importFromDrive(file))}
         />
       )}
     </>

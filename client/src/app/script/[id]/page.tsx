@@ -3,6 +3,8 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { AppPage } from '~/components/common/AppPage';
 import ScriptEditor from '~/components/editor/ScriptEditor';
 import { useCapabilities } from '~/features/capabilities';
@@ -26,11 +28,9 @@ export default function ScriptPage({ params }: { params: Promise<{ id: string }>
       </Link>
       <h1 className='sr-only'>Edit script</h1>
       {script.error !== undefined ? (
-        <p role='alert' className='text-destructive'>
-          This script couldn’t be opened: {script.error.message}
-        </p>
+        <LoadProblem what='this script' error={script.error} onRetry={() => script.mutate()} />
       ) : script.data === undefined ? (
-        <p className='text-muted-foreground'>Opening the script…</p>
+        <SkeletonRows rows={6} label='Opening the script…' />
       ) : (
         <ScriptEditor
           script={script.data}

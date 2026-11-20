@@ -1,7 +1,9 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { use, useState } from 'react';
-import { toast } from 'zephyrex/hooks/useToast';
+import { writeProblem } from 'zephyrex';
+import { notify, toast } from 'zephyrex/hooks/useToast';
+import { LoadProblem } from 'zephyrex/ui/load-problem';
 import PrompterView from '~/components/prompter/PrompterView';
 import { useCapabilities } from '~/features/capabilities';
 import { usePrompterSettings, useRecordActions, useScript } from '~/features/data/records';
@@ -23,9 +25,8 @@ export default function PresentPage({ params }: { params: Promise<{ id: string }
   if (script.error !== undefined) {
     return (
       <main className='p-8'>
-        <p role='alert' className='text-destructive'>
-          This script couldn’t be opened: {script.error.message}
-        </p>
+        <h1 className='sr-only'>The prompter</h1>
+        <LoadProblem what='this script' error={script.error} onRetry={() => script.mutate()} />
       </main>
     );
   }
@@ -45,16 +46,10 @@ export default function PresentPage({ params }: { params: Promise<{ id: string }
         savedSettings={saved.settings}
         onSettingsChange={setEdited}
         onSaveDefaults={async (next) => {
-          try {
-            await saved.save(next);
-            toast({ title: 'Saved as your default' });
-          } catch (error) {
-            toast({
-              title: "Couldn't save your settings",
-              description: error instanceof Error ? error.message : undefined,
-              variant: 'destructive',
-            });
-          }
+          // The prompter fills the screen, so a notice is the one place this can be said.
+          const failed = await writeProblem(saved.save(next), "Couldn't save your settings");
+          if (failed === null) notify('Saved as your default');
+          else toast({ title: "Couldn't save your settings", description: failed, variant: 'destructive' });
         }}
         capabilities={capabilities}
         apiBase={appConfig.server.baseUrl}
