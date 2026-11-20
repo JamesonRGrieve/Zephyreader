@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { RequireFeature } from 'zephyrex';
 import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { PageHeader } from 'zephyrex/ui/page-header';
 import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { AppPage } from '~/components/common/AppPage';
 import RecordingsLibrary from '~/components/recordings/RecordingsLibrary';
@@ -15,7 +16,9 @@ export default function RecordingsPage() {
 
   return (
     <AppPage title='Recordings'>
-      <h1 className='mb-6 text-3xl font-bold'>Recordings</h1>
+      <div className='mb-6'>
+        <PageHeader title='Recordings' />
+      </div>
       {!capabilities.loaded ? null : !capabilities.plans ? (
         <p className='text-muted-foreground'>
           Takes you record from the prompter download straight to your device here; there is no cloud library on this server.

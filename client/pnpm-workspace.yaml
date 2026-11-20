@@ -32,6 +32,7 @@ allowBuilds:
 overrides:
   zephyrex: file:../../client-framework/packages/zephyrex
   '@zephyrex/auth': file:../../auth
+  '@zephyrex/testing': file:../../client-framework/packages/testing
   '@jgrieve/forms': file:../../dynamic-form
   zod2gql: file:../../zod2gql
   # One Playwright everywhere, the build the runners' chromium matches: without these the

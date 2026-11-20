@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { PageHeader } from 'zephyrex/ui/page-header';
 import { AppPage } from '~/components/common/AppPage';
 import RemoteControl from '~/components/remote/RemoteControl';
 import { useCapabilities } from '~/features/capabilities';
@@ -60,7 +61,9 @@ function Remote() {
 export default function RemotePage() {
   return (
     <AppPage title='Remote control' width='narrow'>
-      <h1 className='mb-4 text-2xl font-bold'>Remote control</h1>
+      <div className='mb-4'>
+        <PageHeader title='Remote control' />
+      </div>
       <Suspense>
         <Remote />
       </Suspense>

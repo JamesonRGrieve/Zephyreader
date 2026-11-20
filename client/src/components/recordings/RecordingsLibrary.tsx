@@ -10,6 +10,8 @@ import { RECORDINGS_KEY, type Recording } from '~/features/data/records';
 import { clock } from '~/features/prompter/timing';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
+/** Stable across renders, so useHidden can keep the shown list between them. */
+const takeId = (recording: Recording): string => recording.id;
 
 export interface RecordingsLibraryProps {
   recordings: Recording[];
@@ -23,7 +25,7 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
   const [captioning, setCaptioning] = useState<string | null>(null);
   const writes = useWrites(onChanged);
   /** Takes deleted on screen whose deletion can still be taken back. */
-  const takes = useHidden(recordings, (recording) => recording.id);
+  const takes = useHidden(recordings, takeId);
   const canCaption = capabilities.unlocked(PAID_FEATURES.captions);
   const { shown } = takes;
 

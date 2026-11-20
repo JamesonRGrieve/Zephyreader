@@ -7,6 +7,7 @@ settings:
 overrides:
   zephyrex: file:../../client-framework/packages/zephyrex
   '@zephyrex/auth': file:../../auth
+  '@zephyrex/testing': file:../../client-framework/packages/testing
   '@jgrieve/forms': file:../../dynamic-form
   zod2gql: file:../../zod2gql
   playwright: 1.63.0
@@ -92,6 +93,8 @@ importers:
         injected: true
       '@zephyrex/auth':
         injected: true
+      '@zephyrex/testing':
+        injected: true
       zephyrex:
         injected: true
       zod2gql:
@@ -145,6 +148,9 @@ importers:
       '@typescript/native':
         specifier: npm:typescript@^7.0.2
         version: typescript@7.0.2
+      '@zephyrex/testing':
+        specifier: file:../../client-framework/packages/testing
+        version: file:../../client-framework/packages/testing(@axe-core/playwright@4.11.0(playwright-core@1.63.0(zod@4.6.5)))(@playwright/test@1.63.0(zod@4.6.5))
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
@@ -3955,6 +3961,12 @@ packages:
       react: ^19.0.0
       react-dom: ^19.0.0
       zod: ^4.3.0
+
+  '@zephyrex/testing@file:../../client-framework/packages/testing':
+    resolution: {directory: ../../client-framework/packages/testing, type: directory}
+    peerDependencies:
+      '@axe-core/playwright': 4.11.0
+      '@playwright/test': 1.63.0
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -12799,6 +12811,11 @@ snapshots:
       - valibot
       - vest
       - yup
+
+  '@zephyrex/testing@file:../../client-framework/packages/testing(@axe-core/playwright@4.11.0(playwright-core@1.63.0(zod@4.6.5)))(@playwright/test@1.63.0(zod@4.6.5))':
+    dependencies:
+      '@axe-core/playwright': 4.11.0(playwright-core@1.63.0(zod@4.6.5))
+      '@playwright/test': 1.63.0(zod@4.6.5)
 
   abort-controller@3.0.0:
     dependencies:

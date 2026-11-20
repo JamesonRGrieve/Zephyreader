@@ -21,6 +21,9 @@ import DriveImportDialog from './DriveImportDialog';
 import { copyTitle } from './libraryView';
 import ScriptLibrary from './ScriptLibrary';
 
+/** Stable across renders, so useHidden can keep the shown list between them. */
+const recordId = (record: { id: string }): string => record.id;
+
 type Pending = { kind: 'none' } | { kind: 'new-folder' } | { kind: 'rename-folder'; folder: Folder } | { kind: 'drive' };
 
 /** The signed-in home page: the library, and everything done to it. */
@@ -33,8 +36,8 @@ export default function LibraryPage() {
   const { settings } = usePrompterSettings();
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
   /** Records deleted on screen whose deletion can still be taken back. */
-  const shownScripts = useHidden(scripts.data ?? [], (script) => script.id);
-  const shownFolders = useHidden(folders.data ?? [], (folder) => folder.id);
+  const shownScripts = useHidden(scripts.data ?? [], recordId);
+  const shownFolders = useHidden(folders.data ?? [], recordId);
   const fileInput = useRef<HTMLInputElement>(null);
   const close = () => setPending({ kind: 'none' });
 

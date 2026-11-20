@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useWrites } from 'zephyrex/hooks/useWrites';
 import { Button } from 'zephyrex/ui/button';
 import { LoadProblem } from 'zephyrex/ui/load-problem';
+import { PageHeader } from 'zephyrex/ui/page-header';
 import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { AppPage } from '~/components/common/AppPage';
 import DisplaySettingsForm from '~/components/prompter/DisplaySettingsForm';
@@ -37,10 +38,12 @@ export default function SettingsPage() {
 
   return (
     <AppPage title='Prompter settings' width='medium'>
-      <h1 className='mb-2 text-3xl font-bold'>Prompter settings</h1>
-      <p className='text-muted-foreground mb-8'>
-        How the prompter opens on every device you use. You can change them while presenting too.
-      </p>
+      <div className='mb-8'>
+        <PageHeader
+          title='Prompter settings'
+          description='How the prompter opens on every device you use. You can change them while presenting too.'
+        />
+      </div>
       {saved.error !== undefined ? (
         <LoadProblem what='your settings' error={saved.error} onRetry={saved.retry} />
       ) : draft === null ? (

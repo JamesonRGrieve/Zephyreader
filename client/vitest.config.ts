@@ -5,8 +5,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    // workerDatabase first: each worker gets its own copy of the migrated database, so files run in parallel.
-    setupFiles: ['src/__tests__/workerDatabase.ts', 'src/__tests__/setup.ts'],
+    // The framework's jsdom stand-ins and toast clearing first; then workerDatabase, so each worker
+    // gets its own copy of the migrated database and files run in parallel; then the app's mocks.
+    setupFiles: ['zephyrex/testing/setup', 'src/__tests__/workerDatabase.ts', 'src/__tests__/setup.ts'],
     globalSetup: ['src/__tests__/globalSetup.ts'],
     // Threads over forks: lighter per-worker memory and startup; one worker per core.
     pool: 'threads',
