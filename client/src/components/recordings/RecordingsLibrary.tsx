@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Captions, Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { serverInstant, useClient, writeProblem } from 'zephyrex';
-import { deferWithUndo, notify } from 'zephyrex/hooks/useToast';
+import { serverInstant, useClient } from 'zephyrex';
+import { useWrites } from 'zephyrex/hooks/useWrites';
 import { Button } from 'zephyrex/ui/button';
 import { PAID_FEATURES, type Capabilities } from '~/features/capabilities';
 import { RECORDINGS_KEY, type Recording } from '~/features/data/records';
@@ -21,8 +21,7 @@ export interface RecordingsLibraryProps {
 export default function RecordingsLibrary({ recordings, capabilities, onChanged }: RecordingsLibraryProps) {
   const client = useClient();
   const [captioning, setCaptioning] = useState<string | null>(null);
-  /** Why the last change failed, shown in place until the next one; null when it went through. */
-  const [problem, setProblem] = useState<string | null>(null);
+  const writes = useWrites(onChanged);
   /** Takes deleted on screen whose deletion can still be taken back. */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const canCaption = capabilities.unlocked(PAID_FEATURES.captions);
@@ -38,35 +37,23 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
 
   const caption = async (recording: Recording) => {
     setCaptioning(recording.id);
-    const failed = await writeProblem(
-      client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {}),
-      "Couldn't caption the take",
-    );
-    setProblem(failed === null ? null : `Couldn't caption the take: ${failed}`);
-    if (failed === null) notify('Captions made');
-    await onChanged();
+    await writes.run(client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {}), "Couldn't caption the take", 'Captions made');
     setCaptioning(null);
   };
 
   /** Deletes at once on screen, and on the server once the Undo notice has gone. */
-  const remove = (recording: Recording) => {
-    show(recording.id, false);
-    deferWithUndo(
-      `"${recording.title}" deleted`,
-      () =>
-        void writeProblem(client.delete(`${RECORDINGS_KEY}/${recording.id}`, recording), "Couldn't delete the take")
-          .then((failed) => {
-            setProblem(failed === null ? null : `Couldn't delete the take: ${failed}`);
-            return onChanged();
-          })
-          .finally(() => show(recording.id, true)),
-      () => show(recording.id, true),
-    );
-  };
+  const remove = (recording: Recording) =>
+    writes.remove({
+      message: `"${recording.title}" deleted`,
+      write: () => client.delete(`${RECORDINGS_KEY}/${recording.id}`, recording),
+      fallback: "Couldn't delete the take",
+      hide: () => show(recording.id, false),
+      show: () => show(recording.id, true),
+    });
 
-  const problemNotice = problem !== null && (
+  const problemNotice = writes.problem !== null && (
     <p role='alert' className='text-destructive mb-4 text-sm'>
-      {problem}
+      {writes.problem}
     </p>
   );
 

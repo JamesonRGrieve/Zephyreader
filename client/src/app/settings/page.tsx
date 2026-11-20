@@ -1,8 +1,7 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
-import { writeProblem } from 'zephyrex';
-import { notify } from 'zephyrex/hooks/useToast';
+import { useWrites } from 'zephyrex/hooks/useWrites';
 import { Button } from 'zephyrex/ui/button';
 import { LoadProblem } from 'zephyrex/ui/load-problem';
 import { SkeletonRows } from 'zephyrex/ui/skeleton';
@@ -27,18 +26,13 @@ export default function SettingsPage() {
   const [edited, setEdited] = useState<PrompterSettings | null>(null);
   const draft = saved.loaded ? (edited ?? saved.settings) : null;
   const setDraft = setEdited;
-  const [saving, setSaving] = useState(false);
-  /** Why the last save failed, shown beside the button until the next one. */
-  const [problem, setProblem] = useState<string | null>(null);
+  // Saving updates the cached settings itself, so there is nothing more to refresh.
+  const writes = useWrites(async () => undefined);
   const serverVoice = capabilities.plans && capabilities.unlocked(PAID_FEATURES.serverVoice);
 
   const save = async () => {
     if (draft === null) return;
-    setSaving(true);
-    const failed = await writeProblem(saved.save(draft), "Couldn't save your settings");
-    setProblem(failed === null ? null : `Couldn't save your settings: ${failed}`);
-    if (failed === null) notify('Settings saved');
-    setSaving(false);
+    await writes.run(saved.save(draft), "Couldn't save your settings", 'Settings saved');
   };
 
   return (
@@ -85,13 +79,13 @@ export default function SettingsPage() {
           </section>
           <div className='flex flex-col gap-2'>
             <div>
-              <Button onClick={() => void save()} disabled={saving}>
-                {saving ? 'Saving…' : 'Save settings'}
+              <Button onClick={() => void save()} disabled={writes.busy}>
+                {writes.busy ? 'Saving…' : 'Save settings'}
               </Button>
             </div>
-            {problem !== null && (
+            {writes.problem !== null && (
               <p role='alert' className='text-destructive text-sm'>
-                {problem}
+                {writes.problem}
               </p>
             )}
           </div>

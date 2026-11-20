@@ -63,6 +63,24 @@ describe('RecordingsLibrary deletes', () => {
     expect(client.delete).not.toHaveBeenCalled();
   });
 
+  it('shows the empty state once the last take is deleted and the list refreshed', async () => {
+    const onChanged = vi.fn(async () => undefined);
+    const { rerender } = render(
+      <RecordingsLibrary recordings={[take]} capabilities={capabilities({ plans: true, unlocked: () => true })} onChanged={onChanged} />,
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(screen.getByRole('button', { name: `Delete ${take.title}` }));
+    // While the delete can still be undone the empty state is not asserted: under the framework's
+    // rule (useHidden's `pending`, client-framework batch B1) it must not show until the delete is done.
+    await act(async () => {
+      vi.advanceTimersByTime(UNDO_MS);
+    });
+    await vi.waitFor(() => expect(onChanged).toHaveBeenCalled());
+    // useWrites keeps a removed id hidden; the view counts only loaded takes, so the empty state stays right.
+    rerender(<RecordingsLibrary recordings={[]} capabilities={capabilities({ plans: true, unlocked: () => true })} onChanged={onChanged} />);
+    expect(screen.getByText(/No recordings yet/)).toBeInTheDocument();
+  });
+
   it('brings the take back with the reason when the delete fails', async () => {
     client.delete.mockRejectedValueOnce(new Error('The server is busy'));
     const { user } = renderLibrary();
@@ -71,7 +89,8 @@ describe('RecordingsLibrary deletes', () => {
       vi.advanceTimersByTime(UNDO_MS);
     });
     // Found by its text: the framework's toast store is module-level, so another test's notice may still be up.
-    expect(await screen.findByText("Couldn't delete the take: The server is busy")).toHaveAttribute('role', 'alert');
+    expect(await screen.findByText('The server is busy')).toHaveAttribute('role', 'alert');
+    expect(await screen.findByText("Couldn't delete the take")).toBeInTheDocument();
     expect(screen.getByText(take.title)).toBeInTheDocument();
   });
 });

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
-import { writeProblem } from 'zephyrex';
-import { deferWithUndo, notify } from 'zephyrex/hooks/useToast';
+import { useWrites } from 'zephyrex/hooks/useWrites';
 import { LoadProblem } from 'zephyrex/ui/load-problem';
 import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { LIMITS } from '~/contract';
@@ -37,8 +36,6 @@ export default function LibraryPage() {
   const actions = useRecordActions();
   const { settings } = usePrompterSettings();
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
-  /** Why the last change failed, shown in place until the next one; null when it went through. */
-  const [problem, setProblem] = useState<string | null>(null);
   /** Records deleted on screen whose deletion can still be taken back. */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -47,14 +44,11 @@ export default function LibraryPage() {
   const refresh = useCallback(async () => {
     await Promise.all([scripts.mutate(), folders.mutate()]);
   }, [scripts, folders]);
+  const writes = useWrites(refresh);
 
   /** Runs a change, then says it was done, or why it wasn't. */
-  const run = async (action: string, done: string | null, work: () => Promise<unknown>): Promise<void> => {
-    const failed = await writeProblem(work(), `Couldn't ${action}`);
-    setProblem(failed === null ? null : `Couldn't ${action}: ${failed}`);
-    if (failed === null && done !== null) notify(done);
-    await refresh();
-  };
+  const run = (action: string, done: string | undefined, work: () => Promise<unknown>): void =>
+    void writes.run(work(), `Couldn't ${action}`, done);
 
   const show = (id: string, shown: boolean) =>
     setHidden((current) => {
@@ -65,14 +59,8 @@ export default function LibraryPage() {
     });
 
   /** Deletes at once on screen, and on the server once the Undo notice has gone. */
-  const deleteLater = (id: string, title: string, action: string, work: () => Promise<unknown>) => {
-    show(id, false);
-    deferWithUndo(
-      title,
-      () => void run(action, null, work).finally(() => show(id, true)),
-      () => show(id, true),
-    );
-  };
+  const deleteLater = (id: string, message: string, action: string, write: () => Promise<unknown>) =>
+    writes.remove({ message, write, fallback: `Couldn't ${action}`, hide: () => show(id, false), show: () => show(id, true) });
 
   const openNew = async (fields: Parameters<typeof actions.createScript>[0]) => {
     const created = await actions.createScript(fields);
@@ -107,17 +95,17 @@ export default function LibraryPage() {
         googleDrive={capabilities.googleDrive}
         wordsPerMinute={settings.speed}
         onCreate={() =>
-          void run('create a script', null, () => openNew({ title: 'Untitled script', content: '' }))
+          run('create a script', undefined, () => openNew({ title: 'Untitled script', content: '' }))
         }
         onImportFile={() => fileInput.current?.click()}
         onImportDrive={() => setPending({ kind: 'drive' })}
         onToggleStar={(script) =>
-          void run('star the script', script.starred ? 'Unstarred' : 'Starred', () =>
+          run('star the script', script.starred ? 'Unstarred' : 'Starred', () =>
             actions.updateScript(script, { starred: !script.starred }),
           )
         }
         onDuplicate={(script) =>
-          void run('duplicate the script', 'Script duplicated', () =>
+          run('duplicate the script', 'Script duplicated', () =>
             actions.createScript({
               title: copyTitle(script.title, titles),
               content: script.content,
@@ -126,7 +114,7 @@ export default function LibraryPage() {
           )
         }
         onMove={(script, folderId) =>
-          void run('move the script', 'Script moved', () =>
+          run('move the script', 'Script moved', () =>
             actions.updateScript(script, { script_folder_id: folderId }),
           )
         }
@@ -141,9 +129,9 @@ export default function LibraryPage() {
           )
         }
       />
-      {problem !== null && (
+      {writes.problem !== null && (
         <p role='alert' className='text-destructive mt-4 text-sm'>
-          {problem}
+          {writes.problem}
         </p>
       )}
       <input
@@ -155,7 +143,7 @@ export default function LibraryPage() {
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = '';
-          if (file !== undefined) void run('import the file', null, () => importChosenFile(file));
+          if (file !== undefined) run('import the file', undefined, () => importChosenFile(file));
         }}
       />
       <NameDialog
@@ -169,7 +157,7 @@ export default function LibraryPage() {
         onSubmit={(name) => {
           const target = pending;
           close();
-          void run(
+          run(
             target.kind === 'rename-folder' ? 'rename the folder' : 'create the folder',
             target.kind === 'rename-folder' ? 'Folder renamed' : 'Folder created',
             () => (target.kind === 'rename-folder' ? actions.renameFolder(target.folder, name) : actions.createFolder(name)),
@@ -181,7 +169,7 @@ export default function LibraryPage() {
           open={pending.kind === 'drive'}
           list={actions.listDrive}
           onClose={close}
-          onPick={(file) => void run('import from Google Docs', null, () => importFromDrive(file))}
+          onPick={(file) => run('import from Google Docs', undefined, () => importFromDrive(file))}
         />
       )}
     </>

@@ -84,7 +84,6 @@ function Choices<T extends string>({
             checked={value === option}
             // Choosing the chosen one again keeps it: every setting here always has a value.
             onClick={() => onChange(option)}
-            className='rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-foreground'
           >
             {labels[option]}
           </ChoiceChip>
