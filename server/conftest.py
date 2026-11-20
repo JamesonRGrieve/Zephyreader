@@ -29,3 +29,18 @@ import zephyrex.extensions  # noqa: E402
 
 if str(_extensions_dir) not in zephyrex.extensions.__path__:
     zephyrex.extensions.__path__ = [str(_extensions_dir), *zephyrex.extensions.__path__]
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limit_counts_between_tests() -> None:
+    """Each test starts with no requests counted against the framework's rate limits.
+
+    Every test drives the app from the same test-client address, so sign-ins and other
+    requests counted by earlier tests would throttle later ones (sign-in allows 10 a
+    minute). As server-framework's own conftest does.
+    """
+    from zephyrex.lib.InboundSecurity import reset_rate_limit_counts
+
+    reset_rate_limit_counts()

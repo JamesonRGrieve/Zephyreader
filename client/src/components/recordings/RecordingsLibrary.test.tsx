@@ -70,7 +70,8 @@ describe('RecordingsLibrary deletes', () => {
     await act(async () => {
       vi.advanceTimersByTime(UNDO_MS);
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't delete the take: The server is busy");
+    // Found by its text: the framework's toast store is module-level, so another test's notice may still be up.
+    expect(await screen.findByText("Couldn't delete the take: The server is busy")).toHaveAttribute('role', 'alert');
     expect(screen.getByText(take.title)).toBeInTheDocument();
   });
 });

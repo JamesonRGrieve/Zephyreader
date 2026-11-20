@@ -202,6 +202,12 @@ class TestPreferences:
         )
         assert again.status_code == 409
 
+    def test_settings_default_to_empty_when_not_sent(self, server: TestClient) -> None:
+        # The route passes only the fields a request set; the manager fills the non-null column.
+        person = create_user(server)
+        created = _create(server, person, "prompter_preference")
+        assert created.json()["prompter_preference"]["settings"] == {}
+
 
 class TestPaidFeaturesOnTheFreePlan:
     @pytest.mark.parametrize(

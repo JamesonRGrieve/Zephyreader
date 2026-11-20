@@ -53,6 +53,6 @@ describe('SettingsPage', () => {
     prompter.state.save = vi.fn(async () => Promise.reject(new Error('Someone else changed them')));
     render(<SettingsPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save your settings: Someone else changed them");
+    expect(await screen.findByText("Couldn't save your settings: Someone else changed them")).toHaveAttribute('role', 'alert');
   });
 });

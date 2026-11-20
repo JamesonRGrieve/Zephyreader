@@ -258,6 +258,8 @@ class PrompterPreferenceManager(AbstractBLLManager[PrompterPreferenceModel], Rou
     _model = PrompterPreferenceModel
 
     def create(self, **kwargs: Any) -> Any:
+        # Routes pass only the fields a request set, so the non-null column's default is given here.
+        kwargs.setdefault("settings", {})
         _checked_settings(kwargs.get("settings"))
         if self.list():
             raise HTTPException(status_code=409, detail="You already have prompter settings; update them")
