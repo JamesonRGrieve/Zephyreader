@@ -8,8 +8,8 @@ import { capabilities, RECORDINGS } from '~/stories/fixtures';
 import RecordingsLibrary from './RecordingsLibrary';
 
 const client = vi.hoisted(() => ({
-  delete: vi.fn(async () => ({})),
-  post: vi.fn(async () => ({})),
+  delete: vi.fn().mockResolvedValue({}),
+  post: vi.fn().mockResolvedValue({}),
   url: (path: string) => `/api${path}`,
 }));
 
@@ -19,10 +19,14 @@ const [take] = RECORDINGS;
 if (take === undefined) throw new Error('The recordings fixture needs a take');
 
 function renderLibrary() {
-  const onChanged = vi.fn(async () => undefined);
+  const onChanged = vi.fn().mockResolvedValue(undefined);
   render(
     <>
-      <RecordingsLibrary recordings={RECORDINGS} capabilities={capabilities({ plans: true, unlocked: () => true })} onChanged={onChanged} />
+      <RecordingsLibrary
+        recordings={RECORDINGS}
+        capabilities={capabilities({ plans: true, unlocked: () => true })}
+        onChanged={onChanged}
+      />
       <Toaster />
     </>,
   );
@@ -64,20 +68,30 @@ describe('RecordingsLibrary deletes', () => {
   });
 
   it('shows the empty state once the last take is deleted and the list refreshed', async () => {
-    const onChanged = vi.fn(async () => undefined);
+    const onChanged = vi.fn().mockResolvedValue(undefined);
     const { rerender } = render(
-      <RecordingsLibrary recordings={[take]} capabilities={capabilities({ plans: true, unlocked: () => true })} onChanged={onChanged} />,
+      <RecordingsLibrary
+        recordings={[take]}
+        capabilities={capabilities({ plans: true, unlocked: () => true })}
+        onChanged={onChanged}
+      />,
     );
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await user.click(screen.getByRole('button', { name: `Delete ${take.title}` }));
-    // While the delete can still be undone the empty state is not asserted: under the framework's
-    // rule (useHidden's `pending`, client-framework batch B1) it must not show until the delete is done.
+    // While the delete can still be undone there is no first-run state (useHidden's `pending`).
+    expect(screen.queryByText(/No recordings yet/)).toBeNull();
     await act(async () => {
       vi.advanceTimersByTime(UNDO_MS);
     });
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalled());
     // useWrites keeps a removed id hidden; the view counts only loaded takes, so the empty state stays right.
-    rerender(<RecordingsLibrary recordings={[]} capabilities={capabilities({ plans: true, unlocked: () => true })} onChanged={onChanged} />);
+    rerender(
+      <RecordingsLibrary
+        recordings={[]}
+        capabilities={capabilities({ plans: true, unlocked: () => true })}
+        onChanged={onChanged}
+      />,
+    );
     expect(screen.getByText(/No recordings yet/)).toBeInTheDocument();
   });
 
@@ -89,7 +103,7 @@ describe('RecordingsLibrary deletes', () => {
       vi.advanceTimersByTime(UNDO_MS);
     });
     // Found by its text: the framework's toast store is module-level, so another test's notice may still be up.
-    expect(await screen.findByText('The server is busy')).toHaveAttribute('role', 'alert');
+    expect(await screen.findByText("Couldn't delete the take: The server is busy")).toHaveAttribute('role', 'alert');
     expect(await screen.findByText("Couldn't delete the take")).toBeInTheDocument();
     expect(screen.getByText(take.title)).toBeInTheDocument();
   });

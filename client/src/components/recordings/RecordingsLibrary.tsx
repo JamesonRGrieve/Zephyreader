@@ -3,7 +3,7 @@
 import { Captions, Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { serverInstant, useClient } from 'zephyrex';
-import { useWrites } from 'zephyrex/hooks/useWrites';
+import { useHidden, useWrites } from 'zephyrex/hooks/useWrites';
 import { Button } from 'zephyrex/ui/button';
 import { PAID_FEATURES, type Capabilities } from '~/features/capabilities';
 import { RECORDINGS_KEY, type Recording } from '~/features/data/records';
@@ -23,21 +23,17 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
   const [captioning, setCaptioning] = useState<string | null>(null);
   const writes = useWrites(onChanged);
   /** Takes deleted on screen whose deletion can still be taken back. */
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const takes = useHidden(recordings, (recording) => recording.id);
   const canCaption = capabilities.unlocked(PAID_FEATURES.captions);
-  const shown = recordings.filter((recording) => !hidden.has(recording.id));
-
-  const show = (id: string, visible: boolean) =>
-    setHidden((current) => {
-      const next = new Set(current);
-      if (visible) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const { shown } = takes;
 
   const caption = async (recording: Recording) => {
     setCaptioning(recording.id);
-    await writes.run(client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {}), "Couldn't caption the take", 'Captions made');
+    await writes.run(
+      client.post(`${RECORDINGS_KEY}/${recording.id}/captions`, {}),
+      "Couldn't caption the take",
+      'Captions made',
+    );
     setCaptioning(null);
   };
 
@@ -47,8 +43,8 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
       message: `"${recording.title}" deleted`,
       write: () => client.delete(`${RECORDINGS_KEY}/${recording.id}`, recording),
       fallback: "Couldn't delete the take",
-      hide: () => show(recording.id, false),
-      show: () => show(recording.id, true),
+      hide: () => takes.hide([recording.id]),
+      show: () => takes.show([recording.id]),
     });
 
   const problemNotice = writes.problem !== null && (
@@ -61,9 +57,12 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
     return (
       <section aria-label='Your recordings'>
         {problemNotice}
-        <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
-          No recordings yet. Record a take from the prompter.
-        </p>
+        {/* No first-run state while a deleted take can still come back. */}
+        {!takes.pending && (
+          <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
+            No recordings yet. Record a take from the prompter.
+          </p>
+        )}
       </section>
     );
   }
@@ -129,12 +128,7 @@ export default function RecordingsLibrary({ recordings, capabilities, onChanged 
                   </Button>
                 </>
               )}
-              <Button
-                size='sm'
-                variant='ghost'
-                onClick={() => remove(recording)}
-                aria-label={`Delete ${recording.title}`}
-              >
+              <Button size='sm' variant='ghost' onClick={() => remove(recording)} aria-label={`Delete ${recording.title}`}>
                 <Trash2 className='h-4 w-4' aria-hidden />
               </Button>
             </div>

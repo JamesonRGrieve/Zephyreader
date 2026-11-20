@@ -27,6 +27,11 @@ import { filterScripts, sortScripts, SORTS, type LibraryFilter, type LibrarySort
 export interface ScriptLibraryProps {
   scripts: Script[];
   folders: Folder[];
+  /**
+   * Whether a deleted script can still come back (its Undo notice is up). The first-run state
+   * never shows then, so deleting the last script doesn't flash it.
+   */
+  pending?: boolean;
   /** Whether the back end can import from the user's Google Drive. */
   googleDrive: boolean;
   onCreate: () => void;
@@ -157,9 +162,11 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
         </div>
 
         {shown.length === 0 ? (
-          <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
-            {scripts.length === 0 ? 'No scripts yet. Write one or import a document to start.' : 'No scripts match.'}
-          </p>
+          scripts.length === 0 && props.pending === true ? null : (
+            <p className='text-muted-foreground rounded-lg border border-dashed p-8 text-center'>
+              {scripts.length === 0 ? 'No scripts yet. Write one or import a document to start.' : 'No scripts match.'}
+            </p>
+          )
         ) : (
           <ul className='divide-border divide-y rounded-lg border'>
             {shown.map((script) => (

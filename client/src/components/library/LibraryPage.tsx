@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
-import { useWrites } from 'zephyrex/hooks/useWrites';
+import { useHidden, useWrites, type Hidden } from 'zephyrex/hooks/useWrites';
 import { LoadProblem } from 'zephyrex/ui/load-problem';
 import { SkeletonRows } from 'zephyrex/ui/skeleton';
 import { LIMITS } from '~/contract';
@@ -21,11 +21,7 @@ import DriveImportDialog from './DriveImportDialog';
 import { copyTitle } from './libraryView';
 import ScriptLibrary from './ScriptLibrary';
 
-type Pending =
-  | { kind: 'none' }
-  | { kind: 'new-folder' }
-  | { kind: 'rename-folder'; folder: Folder }
-  | { kind: 'drive' };
+type Pending = { kind: 'none' } | { kind: 'new-folder' } | { kind: 'rename-folder'; folder: Folder } | { kind: 'drive' };
 
 /** The signed-in home page: the library, and everything done to it. */
 export default function LibraryPage() {
@@ -37,7 +33,8 @@ export default function LibraryPage() {
   const { settings } = usePrompterSettings();
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
   /** Records deleted on screen whose deletion can still be taken back. */
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const shownScripts = useHidden(scripts.data ?? [], (script) => script.id);
+  const shownFolders = useHidden(folders.data ?? [], (folder) => folder.id);
   const fileInput = useRef<HTMLInputElement>(null);
   const close = () => setPending({ kind: 'none' });
 
@@ -50,17 +47,15 @@ export default function LibraryPage() {
   const run = (action: string, done: string | undefined, work: () => Promise<unknown>): void =>
     void writes.run(work(), `Couldn't ${action}`, done);
 
-  const show = (id: string, shown: boolean) =>
-    setHidden((current) => {
-      const next = new Set(current);
-      if (shown) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
   /** Deletes at once on screen, and on the server once the Undo notice has gone. */
-  const deleteLater = (id: string, message: string, action: string, write: () => Promise<unknown>) =>
-    writes.remove({ message, write, fallback: `Couldn't ${action}`, hide: () => show(id, false), show: () => show(id, true) });
+  const deleteLater = <T,>(list: Hidden<T>, id: string, message: string, action: string, write: () => Promise<unknown>) =>
+    writes.remove({
+      message,
+      write,
+      fallback: `Couldn't ${action}`,
+      hide: () => list.hide([id]),
+      show: () => list.show([id]),
+    });
 
   const openNew = async (fields: Parameters<typeof actions.createScript>[0]) => {
     const created = await actions.createScript(fields);
@@ -90,13 +85,12 @@ export default function LibraryPage() {
   return (
     <>
       <ScriptLibrary
-        scripts={scripts.data.filter((script) => !hidden.has(script.id))}
-        folders={folders.data.filter((folder) => !hidden.has(folder.id))}
+        scripts={shownScripts.shown}
+        folders={shownFolders.shown}
+        pending={shownScripts.pending}
         googleDrive={capabilities.googleDrive}
         wordsPerMinute={settings.speed}
-        onCreate={() =>
-          run('create a script', undefined, () => openNew({ title: 'Untitled script', content: '' }))
-        }
+        onCreate={() => run('create a script', undefined, () => openNew({ title: 'Untitled script', content: '' }))}
         onImportFile={() => fileInput.current?.click()}
         onImportDrive={() => setPending({ kind: 'drive' })}
         onToggleStar={(script) =>
@@ -114,17 +108,17 @@ export default function LibraryPage() {
           )
         }
         onMove={(script, folderId) =>
-          run('move the script', 'Script moved', () =>
-            actions.updateScript(script, { script_folder_id: folderId }),
-          )
+          run('move the script', 'Script moved', () => actions.updateScript(script, { script_folder_id: folderId }))
         }
         onDelete={(script) =>
-          deleteLater(script.id, `"${script.title}" deleted`, 'delete the script', () => actions.deleteScript(script))
+          deleteLater(shownScripts, script.id, `"${script.title}" deleted`, 'delete the script', () =>
+            actions.deleteScript(script),
+          )
         }
         onCreateFolder={() => setPending({ kind: 'new-folder' })}
         onRenameFolder={(folder) => setPending({ kind: 'rename-folder', folder })}
         onDeleteFolder={(folder) =>
-          deleteLater(folder.id, `Folder "${folder.name}" deleted`, 'delete the folder', () =>
+          deleteLater(shownFolders, folder.id, `Folder "${folder.name}" deleted`, 'delete the folder', () =>
             actions.deleteFolder(folder),
           )
         }

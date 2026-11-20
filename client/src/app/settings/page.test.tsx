@@ -16,20 +16,24 @@ const prompter = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('~/features/data/records', () => ({ usePrompterSettings: () => ({ settings: DEFAULT_SETTINGS, ...prompter.state }) }));
+vi.mock('~/features/data/records', () => ({
+  usePrompterSettings: () => ({ settings: DEFAULT_SETTINGS, ...prompter.state }),
+}));
 vi.mock('~/features/capabilities', async (original) => ({
   ...(await original<typeof import('~/features/capabilities')>()),
   useCapabilities: () => capabilities(),
 }));
-vi.mock('~/components/common/AppPage', () => ({ AppPage: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
+vi.mock('~/components/common/AppPage', () => ({
+  AppPage: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+}));
 
 describe('SettingsPage', () => {
   beforeEach(() => {
     prompter.state = {
       loaded: true,
       error: undefined,
-      retry: vi.fn(async () => undefined),
-      save: vi.fn(async () => undefined),
+      retry: vi.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue(undefined),
     };
   });
 
@@ -50,10 +54,13 @@ describe('SettingsPage', () => {
   });
 
   it('shows why a save failed beside the button', async () => {
-    prompter.state.save = vi.fn(async () => Promise.reject(new Error('Someone else changed them')));
+    prompter.state.save = vi.fn().mockRejectedValue(new Error('Someone else changed them'));
     render(<SettingsPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-    // The framework's useWrites shows the server's reason beside the button.
-    expect(await screen.findByText('Someone else changed them')).toHaveAttribute('role', 'alert');
+    // The framework's useWrites names what failed and the server's reason.
+    expect(await screen.findByText("Couldn't save your settings: Someone else changed them")).toHaveAttribute(
+      'role',
+      'alert',
+    );
   });
 });

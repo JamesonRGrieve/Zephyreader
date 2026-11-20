@@ -54,5 +54,13 @@ export const Empty: Story = {
   },
 };
 
+/** The last script was just deleted and Undo is still on offer: no first-run state yet. */
+export const DeletingLast: Story = {
+  args: { scripts: [], folders: [], pending: true },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText(/No scripts yet/)).toBeNull();
+  },
+};
+
 /** A back end that cannot reach Google Drive offers file import only. */
 export const WithoutGoogleDrive: Story = { args: { googleDrive: false } };
