@@ -60,7 +60,7 @@ function FolderButton({ active, onClick, children }: { active: boolean; onClick:
       type='button'
       onClick={onClick}
       aria-current={active ? 'true' : undefined}
-      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm md:w-full md:whitespace-normal ${
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm md:w-full md:min-w-0 md:shrink md:whitespace-normal ${
         active ? 'bg-accent text-accent-foreground font-medium' : 'hover:bg-muted'
       }`}
     >
@@ -80,11 +80,9 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
 
   return (
     <div className='flex flex-col gap-6 md:flex-row'>
-      {/* A row that scrolls sideways on a phone, so the scripts stay in view; a column beside them on a wider screen. */}
-      <nav
-        aria-label='Folders'
-        className='flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-56 md:flex-col md:overflow-visible md:pb-0'
-      >
+      {/* Rows that wrap on a phone, so every folder and New folder stay in sight (a sideways-scrolling
+          row hid them past the edge with nothing to say so); a column beside the scripts on a wider screen. */}
+      <nav aria-label='Folders' className='flex shrink-0 flex-wrap gap-1 md:w-56 md:flex-col md:flex-nowrap'>
         <FolderButton active={filter.kind === 'all'} onClick={() => setFilter({ kind: 'all' })}>
           All scripts <span className='text-muted-foreground ml-auto text-xs'>{scripts.length}</span>
         </FolderButton>
@@ -92,7 +90,7 @@ export default function ScriptLibrary(props: ScriptLibraryProps) {
           <Star className='h-4 w-4' aria-hidden /> Starred
         </FolderButton>
         {folders.map((folder) => (
-          <div key={folder.id} className='group flex shrink-0 items-center'>
+          <div key={folder.id} className='group flex shrink-0 items-center md:w-full'>
             <FolderButton
               active={filter.kind === 'folder' && filter.folderId === folder.id}
               onClick={() => setFilter({ kind: 'folder', folderId: folder.id })}

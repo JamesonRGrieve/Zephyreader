@@ -36,6 +36,9 @@ const SAAS_MAX_BODY_BYTES = require('../contract/teleprompter.json').limits.reco
 const nextConfig = {
   outputFileTracingRoot: REPOSITORY_ROOT,
   turbopack: { root: REPOSITORY_ROOT },
+  // The e2e build skips its own type-check: the gate type-checks as a step of its own
+  // (ZEPHYREADER_E2E_BUILD, set only by playwright.config.ts and the e2e build job).
+  typescript: { ignoreBuildErrors: process.env.ZEPHYREADER_E2E_BUILD === '1' },
   // Lets the e2e suite build beside a running dev server without sharing its output.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   // Self-contained server bundle for the Containerfile's runtime stage.
@@ -46,6 +49,9 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_ZEPHYREADER_VARIANT: VARIANT,
     APP_URI,
+    // The framework's page policy reads the public origin from here: an https origin (production)
+    // asks the browser to upgrade requests, a plain-http one (an e2e or local build) doesn't.
+    NEXT_PUBLIC_APP_URI: APP_URI,
     NEXT_PUBLIC_THEME_DEFAULT_MODE: process.env.DEFAULT_THEME_MODE || 'dark',
   },
   async rewrites() {

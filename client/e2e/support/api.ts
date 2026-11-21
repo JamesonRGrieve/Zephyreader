@@ -49,3 +49,9 @@ export async function makeScript(page: Page, title: string, content: string): Pr
   const body = (await answer.json()) as { script: { id: string } };
   return body.script;
 }
+
+/** A guarded write (PUT or DELETE) to a record, made against the version it reads first (its ETag). */
+export async function writeCurrent(page: Page, method: 'PUT' | 'DELETE', path: string, body?: unknown): Promise<Answer> {
+  const current = await call(page, 'GET', path);
+  return call(page, method, path, body, { 'If-Match': current.headers().etag ?? '' });
+}

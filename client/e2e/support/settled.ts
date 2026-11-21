@@ -9,3 +9,16 @@ export async function settled(page: Page): Promise<void> {
   await page.waitForLoadState('load');
   await expect(page.getByText(LOADING)).toHaveCount(0);
 }
+
+/** Waits until the page stops moving: its fonts are in and every finite animation has ended. */
+export async function still(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+}

@@ -7,7 +7,7 @@ a local-disk store for recordings, and the pro plan's price. One person is a pro
 subscriber already (their email is PRO_EMAIL); everyone else signs up on the free plan.
 Every person still signs in through the browser, at the test provider.
 
-    uv run python e2e_server.py --port 47101 --idp http://127.0.0.1:47100 --client http://127.0.0.1:47103
+    uv run python e2e_server.py --port 48011 --idp http://127.0.0.1:48010 --client http://127.0.0.1:48013
 """
 
 from __future__ import annotations

@@ -40,7 +40,7 @@ test('a new person writes a script, it saves itself, and they present it @phone'
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
 
   const origin = new URL(testInfo.project.use.baseURL ?? '').host;
-  const idp = '127.0.0.1:47100';
+  const idp = '127.0.0.1:48010';
   expect([...hosts].filter((host) => host !== origin && host !== idp)).toEqual([]);
   await context.close();
 });
@@ -80,7 +80,10 @@ test('folders, starring, moving, importing a file and deleting', async ({ browse
 
   // A delete takes effect on screen at once and can be taken back while its notice is up.
   // Within the scripts list: the Undo notice is a list item too, and names the script.
-  const scriptRow = page.getByRole('region', { name: 'Scripts' }).getByRole('listitem').filter({ hasText: 'welcome speech' });
+  const scriptRow = page
+    .getByRole('region', { name: 'Scripts' })
+    .getByRole('listitem')
+    .filter({ hasText: 'welcome speech' });
   const deleteIt = async () => {
     await scriptRow.getByRole('button', { name: 'welcome speech actions' }).click();
     await page.getByRole('menuitem', { name: 'Delete' }).click();

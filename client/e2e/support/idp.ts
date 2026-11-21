@@ -26,7 +26,7 @@ interface Grant {
   redirectUri: string;
 }
 
-const port = Number(process.argv[2] ?? '47100');
+const port = Number(process.argv[2] ?? '48010');
 const issuer = `http://127.0.0.1:${port}`;
 const { publicKey, privateKey } = await generateKeyPair('RS256');
 const jwk = { ...(await exportJWK(publicKey)), kid: KEY_ID, alg: 'RS256', use: 'sig' };

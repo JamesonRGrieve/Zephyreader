@@ -21,7 +21,7 @@ export default function RecordingsPage() {
       </div>
       {!capabilities.loaded ? null : !capabilities.plans ? (
         <p className='text-muted-foreground'>
-          Takes you record from the prompter download straight to your device here; there is no cloud library on this server.
+          When you finish recording in the prompter, the video downloads straight to your device. This server keeps no copy.
         </p>
       ) : (
         <RequireFeature feature={PAID_FEATURES.cloudRecordings} title='Cloud recordings'>

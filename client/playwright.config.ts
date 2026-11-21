@@ -16,7 +16,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-export const PORTS = { idp: 47100, server: 47101, lite: 47102, saas: 47103 } as const;
+// Zephyreader's ports on the shared runner: 48000 + 10 × its 58137 lane (1), ten of them, 48010–48019
+// (Session 1 Manager, 2026-11-21, after a port clash).
+export const PORTS = { idp: 48010, server: 48011, lite: 48012, saas: 48013 } as const;
 const host = (port: number) => `http://127.0.0.1:${port}`;
 export const IDP = host(PORTS.idp);
 const scratch = mkdtempSync(path.join(process.env.E2E_SCRATCH ?? tmpdir(), 'zephyreader-e2e-'));
@@ -26,9 +28,20 @@ const LITE_BUILT = path.join(scratch, 'lite-built');
 // Two production builds in turn, on a shared build runner.
 const STARTUP_MS = 900_000;
 
+/**
+ * The e2e build skips Next's own type-check (next.config.js): the gate type-checks as a step of its
+ * own, and on a loaded runner over NFS the check is most of the build (Text Mutation's way).
+ */
 const shared = {
   NEXT_TELEMETRY_DISABLED: '1',
+  ZEPHYREADER_E2E_BUILD: '1',
 };
+/**
+ * The builds are already made (a build job before the test job, each within the runner cap): the
+ * servers only start. Each run still migrates its own fresh database.
+ */
+const PREBUILT = process.env.ZEPHYREADER_E2E_PREBUILT === '1';
+const build = PREBUILT ? 'true' : `${NEXT} build`;
 
 const lite = {
   ...shared,
@@ -91,14 +104,14 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: `./node_modules/.bin/prisma migrate deploy && ${NEXT} build && touch '${LITE_BUILT}' && ${NEXT} start -p ${PORTS.lite} -H 127.0.0.1`,
+      command: `./node_modules/.bin/prisma migrate deploy && ${build} && touch '${LITE_BUILT}' && ${NEXT} start -p ${PORTS.lite} -H 127.0.0.1`,
       url: `${host(PORTS.lite)}/api/v1/alive`,
       reuseExistingServer: false,
       timeout: STARTUP_MS,
       env: lite,
     },
     {
-      command: `until [ -e '${LITE_BUILT}' ]; do sleep 1; done; ${NEXT} build && ${NEXT} start -p ${PORTS.saas} -H 127.0.0.1`,
+      command: `until [ -e '${LITE_BUILT}' ]; do sleep 1; done; ${build} && ${NEXT} start -p ${PORTS.saas} -H 127.0.0.1`,
       url: `${host(PORTS.saas)}/user`,
       reuseExistingServer: false,
       timeout: STARTUP_MS,
