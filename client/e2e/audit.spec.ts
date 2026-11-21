@@ -250,10 +250,11 @@ async function audit(
   }
 
   // Framework defect (reported to Cule, 2026-11-21): auth's middleware remembers where to return
-  // (the `href` cookie) on any signed-out request for a private page, prefetches included, and the
-  // signed-out sidebar lists the private pages, so Next's prefetch of them sends sign-in to the last
-  // one (Prompter settings) instead of the library. Cleared here so the audit shoots the app; remove
-  // once the framework stops doing it.
+  // (the `href` cookie) on a signed-out request for a private page, and the signed-out sidebar lists
+  // the private pages, so Next's prefetch of them sends sign-in to the last one (Prompter settings).
+  // auth b8749a3 skips prefetches by their `next-router-prefetch` header, but Next 16 deletes that
+  // header before middleware runs, so it still happens. Cleared here so the audit shoots the app;
+  // remove once the framework stops it.
   await context.clearCookies({ name: 'href' });
   await signIn(page, `audit-${variant}-${viewport}-${theme}@e2e.test`);
   signedIn = true;
