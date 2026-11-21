@@ -9,7 +9,7 @@ description = "Zephyreader SaaS backend: a consumer of the Zephyrex server frame
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
-    "zephyrex[ai,cloud,entitlements,live-sync,oauth-consumer,payment]",
+    "zephyrex[ai,cloud,entitlements,live-sync,oauth-consumer,payment,postgresql]",
     # zephyrex passes FastAPI(openapi_version=...), which FastAPI 0.162 rejects;
     # hold the version the framework's own requirements.lock vets.
     "fastapi~=0.142.2",
