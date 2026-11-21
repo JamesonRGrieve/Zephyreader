@@ -1,10 +1,10 @@
 # Privacy Policy
 
-Last updated: November 2, 2026
+Last updated: November 21, 2026
 
 Zephyreader is an open-source teleprompter. You write or import a script, and it scrolls the script for you to read, at a steady speed or following your voice, on as many of your own screens as you like. You can also record yourself while you read. This policy explains what Zephyreader stores about you, why, and how to get it removed.
 
-Zephyreader is maintained by Jameson R Grieve. Its full source code is public at [github.com/JamesonRGrieve/Zephyreader](https://github.com/JamesonRGrieve/Zephyreader), so everything described here can be checked against the code.
+Zephyreader is maintained by Jameson R Grieve. Its full source code is public, mirrored at [github.com/JamesonRGrieve/Zephyreader](https://github.com/JamesonRGrieve/Zephyreader), so everything described here can be checked against the code.
 
 ## Two ways to run it
 
@@ -114,4 +114,4 @@ If this policy changes, the date at the top changes with it, and the previous ve
 
 ## Contact
 
-Questions and requests for a copy of your data go to the maintainer through [the project's GitHub page](https://github.com/JamesonRGrieve/Zephyreader/issues). Don't post your email address in an issue; you'll be contacted privately to confirm the account is yours.
+Questions about your privacy, and requests for a copy of your data or its deletion, go to [privacy@zephyrex.ca](mailto:privacy@zephyrex.ca). Write from the email address on your account, so the request can be matched to it; you'll be asked to confirm the account is yours before anything is sent or removed. Questions about the code itself are welcome on [the project's GitHub page](https://github.com/JamesonRGrieve/Zephyreader/issues), but never post personal details there.
