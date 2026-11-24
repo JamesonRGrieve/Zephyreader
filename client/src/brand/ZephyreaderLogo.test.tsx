@@ -11,9 +11,17 @@ describe('ZephyreaderLogo', () => {
     expect(mark).toHaveAttribute('viewBox', '0 0 32 32');
   });
 
-  it('draws in the theme’s colours, not fixed ones', () => {
+  it('draws the tile and the lines of script in the theme’s colours', () => {
     const { container } = render(<ZephyreaderLogo />);
     expect(container.querySelector('rect')).toHaveClass('fill-primary');
-    expect(container.querySelector('g')).toHaveClass('fill-primary-foreground');
+    const lines = [...container.querySelectorAll('path')];
+    expect(lines).toHaveLength(3);
+    expect(lines.filter((line) => line.classList.contains('stroke-primary-foreground'))).toHaveLength(2);
+  });
+
+  it('curls the line being read in a fixed amber, so it holds in either theme', () => {
+    const { container } = render(<ZephyreaderLogo />);
+    const read = [...container.querySelectorAll('path')].filter((line) => line.getAttribute('stroke') === '#FCD34D');
+    expect(read).toHaveLength(1);
   });
 });

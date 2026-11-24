@@ -2,19 +2,18 @@
 import type { ReactElement } from 'react';
 
 /**
- * Zephyreader's mark: three lines of script on the theme's accent, a pointer at the eye line
- * beside the middle one. src/app/icon.svg is the same drawing in fixed colours, for the
- * browser tab and the installed app. Decorative: the app's name always stands beside it.
+ * Zephyreader's mark: a zephyr, three lines of wind that are lines of script; the line being read
+ * curls in the accent. src/app/icon.svg is the same drawing in fixed colours, for the browser tab
+ * and the installed app. Decorative: the app's name always stands beside it.
  */
 export function ZephyreaderLogo(): ReactElement {
   return (
     <svg viewBox='0 0 32 32' className='size-8' aria-hidden>
       <rect width='32' height='32' rx='7' className='fill-primary' />
-      <g className='fill-primary-foreground'>
-        <rect x='10' y='9.25' width='14' height='2.5' rx='1.25' opacity='0.55' />
-        <path d='M5.5 13.5 9 16 5.5 18.5Z' />
-        <rect x='10' y='14.75' width='16' height='2.5' rx='1.25' />
-        <rect x='10' y='20.25' width='11' height='2.5' rx='1.25' opacity='0.55' />
+      <g fill='none' strokeWidth='2.4' strokeLinecap='round'>
+        <path d='M6 10.5h12.5a3.2 3.2 0 1 0-3.2-3.2' className='stroke-primary-foreground' />
+        <path d='M6 16h17a3.6 3.6 0 1 1-3.6 3.6' stroke='#FCD34D' />
+        <path d='M6 21.5h8M6 26h5' className='stroke-primary-foreground' />
       </g>
     </svg>
   );
