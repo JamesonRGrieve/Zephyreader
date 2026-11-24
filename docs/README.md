@@ -47,7 +47,16 @@ SQLite database on a `/data` volume. Secrets come from `--env-file` at run time;
 
 ## Sign-in
 
-Google sign-in is OAuth 2.0 authorization code with PKCE, per the OAuth 2.0
+Each build has one sign-in and no passwords or magic links (`authModes.basic`
+off, `oauthProviders` in `client/src/zephyrex.config.ts`). The SaaS build, which
+the hosted service runs, signs in only with Zephyrex's Authentik through the
+server's OpenID Connect provider (`oidc`), as the instance `authentik` that
+every Zephyrex app names the same (button "Continue with Zephyrex"; the
+server's `OIDC_CONSUMER_ISSUER_URL`, `_CLIENT_ID`, `_CLIENT_SECRET`, redirect
+`<APP_URI>/user/close/authentik`, and `REGISTRATION_MODE=sso`; operator, 2026-11-24).
+Lite signs in with Google, as below.
+
+Lite's Google sign-in is OAuth 2.0 authorization code with PKCE, per the OAuth 2.0
 Security BCP (RFC 9700) and OpenID Connect:
 
 1. `POST /api/v1/auth/oauth/authorize {provider: "google"}` returns

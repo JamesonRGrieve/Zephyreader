@@ -15,12 +15,12 @@ Zephyreader is maintained by Jameson R Grieve. Its full source code is public, m
 
 ### Your account
 
-You sign in with Google. There are no passwords. When you sign in for the first time, an account is created from what Google returns:
+On the hosted service you sign in with a Zephyrex account, at the sign-in service the maintainer runs for Zephyrex's apps (Authentik, not a third party). A self-hosted copy signs in with Google. Either way, Zephyreader has no passwords of its own. When you sign in for the first time, an account is created from what the sign-in service returns:
 
-- your email address (only accepted if Google confirms you own it)
+- your email address (only accepted if the sign-in service confirms you own it)
 - your name and display name
-- the address of your Google profile picture
-- your Google account's stable identifier, which is how you're recognised on later sign-ins
+- the address of your profile picture, if it has one
+- your stable identifier there, which is how you're recognised on later sign-ins
 
 You can also set a time zone and a language on your account page, and edit your name there.
 
@@ -48,7 +48,7 @@ If you join the waitlist for accounts and paid plans, we keep your email address
 
 ### Sign-in records
 
-Each sign-in creates a session record: an identifier, when it started, when it expires, and whether you've signed out. While a Google sign-in is in progress, a short-lived record holds the security values for that attempt. It's deleted when you return from Google, and it expires after 10 minutes if you don't.
+Each sign-in creates a session record: an identifier, when it started, when it expires, and whether you've signed out. While a sign-in is in progress, a short-lived record holds the security values for that attempt. It's deleted when you return from the sign-in service, and it expires after 10 minutes if you don't.
 
 ## What we don't store
 
@@ -68,7 +68,7 @@ Zephyreader's use of information received from Google APIs adheres to the [Googl
 
 ## Who else receives data
 
-- **Google** handles sign-in and serves the Drive files you import, under [Google's Privacy Policy](https://policies.google.com/privacy).
+- **Google** handles sign-in on a self-hosted copy, and serves the Drive files you import, under [Google's Privacy Policy](https://policies.google.com/privacy). The hosted service's sign-in is the maintainer's own.
 - **Your browser's maker**, if you choose browser speech for voice-follow, as described above.
 - **Square** (hosted service) handles checkout and billing for paid plans, under [Square's Privacy Notice](https://squareup.com/legal/general/privacy).
 - **The AI and speech providers** the hosted service uses for the AI writer, captions and server speech recognition receive the text or audio you send to those features, only to process it.
@@ -81,7 +81,7 @@ Zephyreader uses only the cookies it needs to work:
 
 - **`zx_session`** keeps you signed in; scripts can't read it. It lasts 24 hours, or until you sign out.
 - **`zx_csrf`** protects your account from forged requests. It lasts 24 hours, or until you sign out.
-- **`zx_oauth_binding`** ties a Google sign-in to the browser that began it. It lasts 10 minutes, or until you return from Google.
+- **`zx_oauth_binding`** ties a sign-in to the browser that began it. It lasts 10 minutes, or until you return from the sign-in service.
 - **`theme`** remembers light or dark mode, until you clear it.
 
 Each browser tab also keeps a random name for itself in session storage, so your other devices can tell it apart, and the on-device speech model is kept in your browser's cache. Both stay on your device.

@@ -115,5 +115,14 @@ test('with sign-up closed, the sign-up page leads to the waitlist, and sign-in s
   await expect(page.getByRole('heading', { name: 'Accounts and paid plans: waitlist only' })).toBeVisible();
   await page.goto('/user');
   await expect(page).toHaveURL(/\/user$/);
-  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with Zephyrex' })).toBeVisible();
+});
+
+test('the hosted edition signs in only with Zephyrex, and lite only with Google', async ({ page }, testInfo) => {
+  await page.goto('/user');
+  const provider = isSaas(testInfo.project.name) ? 'Zephyrex' : 'Google';
+  await expect(page.getByRole('button', { name: `Continue with ${provider}` })).toBeVisible();
+  // No other provider, and no email sign-in (password or magic link).
+  await expect(page.getByRole('button', { name: /^Continue with/ })).toHaveCount(1);
+  await expect(page.getByRole('textbox')).toHaveCount(0);
 });

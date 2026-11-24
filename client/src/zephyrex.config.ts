@@ -36,6 +36,9 @@ const teleprompterExtension: ZephyrexClientExtension = {
 
 const DEFAULT_PORT = 6969;
 
+/** The SaaS build, which the hosted service runs (next.config.js inlines the variant). */
+const HOSTED = process.env.NEXT_PUBLIC_ZEPHYREADER_VARIANT === 'saas';
+
 export const APP_NAME = 'Zephyreader';
 export const APP_DESCRIPTION = 'A teleprompter that follows your voice, on every screen you own.';
 
@@ -66,10 +69,14 @@ const config: ZephyrexConfig = {
     // What the account page says deleting an account takes with it (the server erases it first).
     deletionNote:
       'Your scripts, folders, prompter settings and recordings are deleted with your account, and you are signed out. This cannot be undone.',
-    // Google is the only sign-in: no password accounts, and no magic-link extension
-    // (@zephyrex/auth-magic-link) is registered, so magic links stay off too.
+    // One identity provider is the only sign-in: no password accounts, and no magic-link extension
+    // (@zephyrex/auth-magic-link) is registered, so magic links stay off too. The hosted service
+    // signs in only with Zephyrex's Authentik: the server's OpenID Connect instance `authentik`, which
+    // every Zephyrex app names the same (operator, 2026-11-24; REGISTRATION_MODE=sso on the server).
+    // A lite install signs in with Google.
     authModes: { basic: false },
-    oauthProviders: ['google'],
+    oauthProviders: [HOSTED ? 'authentik' : 'google'],
+    ...(HOSTED ? { oauthLabels: { authentik: 'Zephyrex' } } : {}),
     // The app's pages, and any more the deployment names.
     privateRoutes: [...APP_ROUTES, ...(process.env.PRIVATE_ROUTES ?? '').split(',').filter(Boolean)],
   },

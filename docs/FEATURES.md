@@ -56,7 +56,7 @@ where the feature is a selling point, not every product that has it.
 | F26 | Captions and transcripts for recordings (SRT, VTT) | BIGVU, Teleprompter.com | – | ✓ |
 | F27 | Translate a script | BIGVU | – | ✓ |
 | **Accounts** |
-| F28 | Sign in with Google | — | ✓ | ✓ |
+| F28 | One sign-in, no passwords: Google on lite, Zephyrex (Authentik, OIDC) on SaaS | — | ✓ | ✓ |
 | F29 | Plans: free tier, paid features, lapsed subscription falls back to free | Speakflow, BIGVU | – | ✓ |
 | F30 | Installable app, works offline once loaded | VoicePrompter | ✓ | ✓ |
 | F31 | Waitlist for accounts and paid plans, into Zephyrex's CRM; closed sign-up leads there | — | – | ✓ |

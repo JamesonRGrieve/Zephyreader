@@ -36,10 +36,17 @@ export async function signedInPerson(browser: Browser, testInfo: TestInfo, email
   return { email, context, page };
 }
 
+/**
+ * The one sign-in button: the hosted (SaaS) build signs in with Zephyrex's Authentik, lite with
+ * Google. The test provider stands in for both. Both builds' projects share this module, so the
+ * button is matched by either name.
+ */
+export const SIGN_IN_BUTTON = /^Continue with (Zephyrex|Google)$/;
+
 /** Signs in on `page` at the test provider, as a person clicking through it. */
 export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/user');
-  await page.getByRole('button', { name: 'Continue with Google' }).click();
+  await page.getByRole('button', { name: SIGN_IN_BUTTON }).click();
   await expect(page.getByRole('heading', { name: 'Test sign-in' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   await page.getByRole('button', { name: 'Continue' }).click();

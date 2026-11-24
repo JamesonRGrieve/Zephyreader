@@ -2,7 +2,9 @@
 """The SaaS server for the end-to-end suite (client/playwright.config.ts starts it).
 
 It boots the real app on a throwaway database and file store, and configures what a
-deployment's operator would: Google sign-in pointed at the suite's test OpenID provider,
+deployment's operator would: the hosted service's one sign-in, which the framework makes at
+startup from OIDC_CONSUMER_* (the `oidc` instance `authentik`, Zephyrex's Authentik in
+production), pointed at the suite's test OpenID provider,
 a local-disk store for recordings, and the pro plan's price. One person is a pro
 subscriber already (their email is PRO_EMAIL); everyone else signs up on the free plan.
 Every person still signs in through the browser, at the test provider.
@@ -25,7 +27,6 @@ PRO_EMAIL = "pro@e2e.test"
 PRO_PRICE = "price_e2e_pro"
 IDP_CLIENT_ID = "zephyreader-e2e"
 IDP_CLIENT_SECRET = "zephyreader-e2e-secret"
-GOOGLE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive.readonly"
 
 
 def configure_environment(port: int, idp: str, client: str) -> None:
@@ -45,9 +46,12 @@ def configure_environment(port: int, idp: str, client: str) -> None:
             "CLOUD_LOCAL_DIRECTORY": os.path.join(scratch, "store"),
             "ENTITLEMENT_PRO_PLAN_IDS": PRO_PRICE,
             "ZEPHYREADER_SERVER_PORT": str(port),
+            "OIDC_CONSUMER_ISSUER_URL": idp,
+            "OIDC_CONSUMER_CLIENT_ID": IDP_CLIENT_ID,
+            "OIDC_CONSUMER_CLIENT_SECRET": IDP_CLIENT_SECRET,
+            "OAUTH_CONSUMER_REDIRECT_URIS": f"{client}/user/close/authentik",
         }
     )
-    os.environ.setdefault("TEST_IDP_ISSUER", idp)
 
 
 def seed(app: object) -> None:
@@ -72,18 +76,6 @@ def seed(app: object) -> None:
         for key, value in values.items():
             settings.create(provider_instance_id=created.id, key=key, value=value)
 
-    instance(
-        "oauth_google",
-        "google",
-        {
-            "client_id": IDP_CLIENT_ID,
-            "client_secret": IDP_CLIENT_SECRET,
-            "issuer": os.environ["TEST_IDP_ISSUER"],
-            "scopes": GOOGLE_SCOPES,
-            "offline": "true",
-            "redirect_uris": f"{os.environ['APP_URI']}/user/close/google",
-        },
-    )
     instance("local_disk", "e2e-store", {"directory": os.environ["CLOUD_LOCAL_DIRECTORY"]})
 
     pro = create_user(TestClient(app), email=PRO_EMAIL)  # type: ignore[arg-type,no-untyped-call]
