@@ -7,6 +7,7 @@ settings:
 overrides:
   zephyrex: file:../../client-framework/packages/zephyrex
   '@zephyrex/auth': file:../../auth
+  '@zephyrex/marketing': file:../../client-framework/packages/marketing
   '@zephyrex/testing': file:../../client-framework/packages/testing
   '@jgrieve/forms': file:../../dynamic-form
   zod2gql: file:../../zod2gql
@@ -37,6 +38,9 @@ importers:
       '@zephyrex/auth':
         specifier: file:../../auth
         version: file:../../auth(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5)
+      '@zephyrex/marketing':
+        specifier: file:../../client-framework/packages/marketing
+        version: file:../../client-framework/packages/marketing(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(zephyrex@file:../../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5))(zod@4.6.5)
       axios:
         specifier: ^1.20.0
         version: 1.20.0
@@ -92,6 +96,8 @@ importers:
       '@jgrieve/forms':
         injected: true
       '@zephyrex/auth':
+        injected: true
+      '@zephyrex/marketing':
         injected: true
       '@zephyrex/testing':
         injected: true
@@ -4021,6 +4027,14 @@ packages:
       react: ^19.0.0
       react-dom: ^19.0.0
       zod: ^4.3.0
+
+  '@zephyrex/marketing@file:../../client-framework/packages/marketing':
+    resolution: {directory: ../../client-framework/packages/marketing, type: directory}
+    peerDependencies:
+      next: ^16.2.6
+      react: ^19.2.8
+      zephyrex: workspace:^
+      zod: ^4.4.3
 
   '@zephyrex/testing@file:../../client-framework/packages/testing':
     resolution: {directory: ../../client-framework/packages/testing, type: directory}
@@ -12907,6 +12921,13 @@ snapshots:
       - valibot
       - vest
       - yup
+
+  '@zephyrex/marketing@file:../../client-framework/packages/marketing(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(zephyrex@file:../../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5))(zod@4.6.5)':
+    dependencies:
+      next: 16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react: 19.3.0
+      zephyrex: file:../../client-framework/packages/zephyrex(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(effect@3.20.0)(joi@17.13.8)(next@16.3.7(@babel/core@7.29.7)(@playwright/test@1.63.0(zod@4.6.5))(@types/node@26.6.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss-animate@1.0.7(tailwindcss@4.3.3))(tailwindcss@4.3.3)(valibot@1.4.2(@typescript/typescript6@6.0.2))(zod@4.6.5)
+      zod: 4.6.5
 
   '@zephyrex/testing@file:../../client-framework/packages/testing(@axe-core/playwright@4.11.0(playwright-core@1.63.0(zod@4.6.5)))(@playwright/test@1.63.0(zod@4.6.5))':
     dependencies:

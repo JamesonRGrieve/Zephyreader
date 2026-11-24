@@ -41,10 +41,13 @@ test('signed in, every app page reaches the navigation and names itself @phone',
   await context.close();
 });
 
-test('signed out, the landing page is for visitors and app pages ask you to sign in @phone', async ({ page }) => {
+test('signed out, the landing page is for visitors and app pages ask you to sign in @phone', async ({ page }, testInfo) => {
   await page.goto('/');
   await expect(page).toHaveTitle('Zephyreader');
-  await expect(page.getByRole('link', { name: 'Sign in to start' })).toBeVisible();
+  // The hosted service's way in is its waitlist (sign-up is closed there); lite's is sign-in.
+  const start = testInfo.project.name.startsWith('saas') ? 'Join the waitlist' : 'Sign in to start';
+  await expect(page.getByRole('link', { name: start })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Sign in' })).toBeVisible();
   for (const path of ['/scripts', '/recordings', '/settings']) {
     await page.goto(path);
     await page.waitForURL((url) => url.pathname.startsWith('/user'));

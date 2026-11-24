@@ -6,7 +6,8 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ZephyreaderLogo } from '~/brand/ZephyreaderLogo';
 import { CSRF_COOKIE } from '~/lib/auth/sessionCookies';
-import appConfig, { APP_NAME, LIBRARY_PATH } from '~/zephyrex.config';
+import { waitlistSettings } from '~/lib/waitlist';
+import appConfig, { APP_NAME, LIBRARY_PATH, PLANS_PATH } from '~/zephyrex.config';
 
 const HIGHLIGHTS = [
   { icon: Mic, title: 'Follows your voice', text: 'The script scrolls as you speak and waits when you pause.' },
@@ -17,11 +18,17 @@ const HIGHLIGHTS = [
 /**
  * The landing page, for visitors. Someone signed in (the readable session cookie a sign-in
  * leaves, as the client's useHasSession reads it) goes straight to their scripts; a stale
- * cookie is caught there by the session check, which sends them to sign in.
+ * cookie is caught there by the session check, which sends them to sign in. Where this server
+ * keeps a waitlist (the hosted service, whose sign-up is closed), the way in is the waitlist;
+ * sign-in stays open for people who already have an account.
  */
 export default async function Home(): Promise<ReactNode> {
   if ((await cookies()).has(CSRF_COOKIE)) redirect(LIBRARY_PATH);
   const signIn = appConfig.auth?.authPath ?? '/user';
+  const start =
+    waitlistSettings() === undefined
+      ? { href: signIn, label: 'Sign in to start' }
+      : { href: PLANS_PATH, label: 'Join the waitlist' };
 
   return (
     <div className='flex min-h-svh w-full min-w-0 flex-col'>
@@ -39,8 +46,11 @@ export default async function Home(): Promise<ReactNode> {
         <p className='text-muted-foreground max-w-2xl text-lg'>
           Write or import your script, then read it on any screen: scrolling at your pace, in time, or following your voice.
         </p>
-        <a href={signIn} className='bg-primary text-primary-foreground rounded-md px-6 py-3 font-medium hover:opacity-90'>
-          Sign in to start
+        <a
+          href={start.href}
+          className='bg-primary text-primary-foreground rounded-md px-6 py-3 font-medium hover:opacity-90'
+        >
+          {start.label}
         </a>
         <ul className='grid w-full gap-4 sm:grid-cols-3'>
           {HIGHLIGHTS.map(({ icon: Icon, title, text }) => (

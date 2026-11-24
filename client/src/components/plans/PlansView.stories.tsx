@@ -23,11 +23,14 @@ const meta: Meta<typeof PlansView> = {
 export default meta;
 type Story = StoryObj<typeof PlansView>;
 
-/** Where plans are sold: waitlist only, no payment. */
+/** The hosted service: accounts and paid plans are waitlist only, no payment. */
 export const Waitlist: Story = {
   args: { waitlist: true },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
+    await expect(
+      within(canvasElement).getByRole('heading', { name: 'Accounts and paid plans: waitlist only' }),
+    ).toBeVisible();
+    await expect(within(canvasElement).getByRole('region', { name: 'Join the waitlist' })).toBeVisible();
   },
 };
 

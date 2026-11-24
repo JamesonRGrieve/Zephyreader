@@ -20,7 +20,13 @@ import { defineConfig, devices } from '@playwright/test';
 // (ZEPHYREADER_E2E_LANE, default 1: 48010–48019; Session 1 Manager, 2026-11-21, after a port clash;
 // lane 11's 48110–48113, Chief of Staff, 2026-11-24).
 const PORT_BASE = 48000 + 10 * Number(process.env.ZEPHYREADER_E2E_LANE ?? '1');
-export const PORTS = { idp: PORT_BASE, server: PORT_BASE + 1, lite: PORT_BASE + 2, saas: PORT_BASE + 3 } as const;
+export const PORTS = {
+  idp: PORT_BASE,
+  server: PORT_BASE + 1,
+  lite: PORT_BASE + 2,
+  saas: PORT_BASE + 3,
+  saasClosed: PORT_BASE + 4,
+} as const;
 const host = (port: number) => `http://127.0.0.1:${port}`;
 export const IDP = host(PORTS.idp);
 const scratch = mkdtempSync(path.join(process.env.E2E_SCRATCH ?? tmpdir(), 'zephyreader-e2e-'));
@@ -72,6 +78,19 @@ const saas = {
   WAITLIST_ERP_URL: 'http://127.0.0.1:9',
 };
 
+/**
+ * The same SaaS build, started a second time as the hosted service runs it: sign-up closed, so the
+ * sign-up page leads to the waitlist (SOP: Waitlist and Sign-up Gate, operator 2026-11-24). Test
+ * sign-in makes a fresh person, which a closed server refuses, so only the @signup-closed specs
+ * run here. The middleware reads these when the server starts.
+ */
+const saasClosed = {
+  ...saas,
+  PORT: String(PORTS.saasClosed),
+  REGISTRATION_MODE: 'closed',
+  SIGNUP_DISABLED_PATH: '/plans',
+};
+
 const desktop = devices['Desktop Chrome'];
 const phone = devices['Pixel 7'];
 
@@ -86,8 +105,12 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: { trace: 'retain-on-failure', navigationTimeout: 60_000 },
   projects: [
-    { name: 'lite', use: { ...desktop, baseURL: host(PORTS.lite) }, grepInvert: /@phone-only/ },
-    { name: 'saas', use: { ...desktop, baseURL: host(PORTS.saas) }, grepInvert: /@phone-only/ },
+    { name: 'lite', use: { ...desktop, baseURL: host(PORTS.lite) }, grepInvert: /@phone-only|@signup-closed/ },
+    { name: 'saas', use: { ...desktop, baseURL: host(PORTS.saas) }, grepInvert: /@phone-only|@signup-closed/ },
+    // The closed start needs a build already made (see its server below).
+    ...(PREBUILT
+      ? [{ name: 'saas-closed', use: { ...desktop, baseURL: host(PORTS.saasClosed) }, grep: /@signup-closed/ }]
+      : []),
     { name: 'lite-phone', use: { ...phone, baseURL: host(PORTS.lite) }, grep: /@phone/ },
     { name: 'saas-phone', use: { ...phone, baseURL: host(PORTS.saas) }, grep: /@phone/ },
   ],
@@ -123,5 +146,17 @@ export default defineConfig({
       timeout: STARTUP_MS,
       env: saas,
     },
+    // Only beside a prebuilt build (the gate's e2ebuild step): it starts that build, never makes one.
+    ...(PREBUILT
+      ? [
+          {
+            command: `${NEXT} start -p ${PORTS.saasClosed} -H 127.0.0.1`,
+            url: `${host(PORTS.saasClosed)}/user`,
+            reuseExistingServer: false,
+            timeout: STARTUP_MS,
+            env: saasClosed,
+          },
+        ]
+      : []),
   ],
 });

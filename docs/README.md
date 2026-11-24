@@ -60,7 +60,9 @@ Security BCP (RFC 9700) and OpenID Connect:
    `{session_key, user_id, grant_type, expires_at, token}`.
 
 Accounts are keyed on Google's subject ID. A first sign-in creates an account
-only for a verified email (`OAUTH_ALLOW_SIGNUP=false` turns that off). Google's
+only for a verified email (`OAUTH_ALLOW_SIGNUP=false` turns that off; on the SaaS
+server, `REGISTRATION_MODE=closed` refuses new accounts, and the client's sign-up
+page then leads to `SIGNUP_DISABLED_PATH`, the hosted service's `/plans` waitlist). Google's
 access and refresh tokens are stored AES-256-GCM encrypted and refreshed as
 they expire.
 

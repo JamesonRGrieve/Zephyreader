@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: November 21, 2026
+Last updated: November 24, 2026
 
 Zephyreader is an open-source teleprompter. You write or import a script, and it scrolls the script for you to read, at a steady speed or following your voice, on as many of your own screens as you like. You can also record yourself while you read. This policy explains what Zephyreader stores about you, why, and how to get it removed.
 
@@ -8,7 +8,7 @@ Zephyreader is maintained by Jameson R Grieve. Its full source code is public, m
 
 ## Two ways to run it
 
-- **The hosted service** is the Zephyreader that the maintainer runs for anyone to sign up to. This policy covers it.
+- **The hosted service** is the Zephyreader that the maintainer runs for anyone to use. New accounts and paid plans are waitlist only for now. This policy covers it.
 - **A self-hosted copy** is one someone runs on their own server from the published code. Whoever runs that copy holds its data, not the maintainer, and their own policy applies. A self-hosted copy stores the same things described here, except recordings, captions, payments, the AI writer and server speech recognition, which only the hosted service has.
 
 ## What we store
@@ -41,6 +41,10 @@ If you keep a recording in your recordings library, the video is stored with its
 ### Your plan (hosted service)
 
 If you subscribe to a paid plan, the plan, the subscription's status and renewal date, and Square's identifiers for you and your payments are stored. Square is the payment processor: your card details go to Square and are never seen or stored by Zephyreader.
+
+### The waitlist (hosted service)
+
+If you join the waitlist for accounts and paid plans, we keep your email address, the name if you give one, which you're waiting for (an account or a paid plan), and that you agreed to be emailed. It goes into the maintainer's customer records (an ERPNext system the maintainer runs, not a third party), marked as a Zephyreader waitlist sign-up, and is used only to email you when accounts and paid plans open. It is kept until you ask for it to be removed, as described under Contact below. The waitlist allows a few sign-ups an hour from one network address, so the address your request came from is held, in memory only, for an hour.
 
 ### Sign-in records
 
@@ -103,6 +107,7 @@ You can stop Zephyreader using your Google account at any time, without deleting
 - **Revoke Google access** at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 - **Delete your account and its data** yourself, on your account page.
 - **Ask for a copy** of what's stored about you, as described under Contact below.
+- **Leave the waitlist** by asking, as described under Contact below.
 
 ## Children
 

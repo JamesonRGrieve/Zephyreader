@@ -62,24 +62,58 @@ test('paid plans are waitlist only: every way to pay leads to the waitlist, and 
   await page.waitForURL(/\/plans$/);
   if (!isSaas(testInfo.project.name)) {
     await expect(page.getByText('This server has no paid plans.')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Join the waitlist' })).toHaveCount(0);
     await context.close();
     return;
   }
-  await expect(page.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Accounts and paid plans: waitlist only' })).toBeVisible();
   await expect(page.getByText('nothing here takes a payment', { exact: false })).toBeVisible();
-  await expect(page.getByRole('form', { name: 'Join the waitlist' })).toBeVisible();
-
-  // Signed out, from the landing page, it is the same page.
-  const visitor = await browser.newContext();
-  const visitorPage = await visitor.newPage();
-  await visitorPage.goto('/plans');
-  await expect(visitorPage.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
-  await visitor.close();
+  await expect(page.getByRole('region', { name: 'Join the waitlist' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Pro plan, for one person' })).toBeChecked();
 
   // An upgrade prompt's "See plans" leads here too.
   await page.goto('/recordings');
   await page.getByRole('note', { name: 'Upgrade' }).getByRole('link', { name: 'See plans' }).click();
   await page.waitForURL(/\/plans$/);
-  await expect(page.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Accounts and paid plans: waitlist only' })).toBeVisible();
   await context.close();
+});
+
+test('a visitor joins the waitlist from the landing page', async ({ page }, testInfo) => {
+  test.skip(!isSaas(testInfo.project.name), 'lite has no waitlist');
+  // A stand-in for this app's /api/waitlist, so no lead reaches the ERP (the route is unit-tested).
+  const sent: unknown[] = [];
+  await page.route('**/api/waitlist', async (route) => {
+    sent.push(route.request().postDataJSON());
+    await route.fulfill({ status: 202, json: { ok: true } });
+  });
+  await page.goto('/');
+  await page.getByRole('main').getByRole('link', { name: 'Join the waitlist' }).click();
+  await page.waitForURL(/\/plans$/);
+  const form = page.getByRole('region', { name: 'Join the waitlist' });
+  await form.getByRole('textbox', { name: 'Email' }).fill('zephyrex-site-test+e2e@example.com');
+  // A visitor starts on an account; they may pick a plan instead.
+  await expect(form.getByRole('radio', { name: 'An account' })).toBeChecked();
+  await form.getByRole('radio', { name: 'Team plan, shared with colleagues' }).click();
+  await form.getByRole('checkbox').check();
+  await form.getByRole('button', { name: 'Join the waitlist' }).click();
+  await expect(form.getByRole('status')).toContainText('on the waitlist');
+  expect(sent).toEqual([{ email: 'zephyrex-site-test+e2e@example.com', consent: true, interest: 'team' }]);
+});
+
+test('lite has no waitlist route', async ({ request }, testInfo) => {
+  test.skip(isSaas(testInfo.project.name), 'the hosted edition has the waitlist');
+  const answer = await request.post('/api/waitlist', { data: { email: 'a@example.com', consent: true } });
+  expect(answer.status()).toBe(404);
+});
+
+test('with sign-up closed, the sign-up page leads to the waitlist, and sign-in stays open @signup-closed', async ({
+  page,
+}) => {
+  await page.goto('/user/register');
+  await page.waitForURL(/\/plans$/);
+  await expect(page.getByRole('heading', { name: 'Accounts and paid plans: waitlist only' })).toBeVisible();
+  await page.goto('/user');
+  await expect(page).toHaveURL(/\/user$/);
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
 });

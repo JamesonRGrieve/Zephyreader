@@ -5,7 +5,10 @@ import { ZephyreaderLogo } from './brand/ZephyreaderLogo';
 /** Where a signed-in person works: the script library. `/` is the landing page for visitors. */
 export const LIBRARY_PATH = '/scripts';
 
-/** Plans: paid plans are waitlist-only, so every "See plans" leads to the waitlist here. */
+/**
+ * Plans and the waitlist: new accounts and paid plans are waitlist only, so every "See plans", the
+ * landing page and the closed sign-up page (SIGNUP_DISABLED_PATH on the hosted service) lead here.
+ */
 export const PLANS_PATH = '/plans';
 
 /** The app's pages, which need a signed-in user (matched as path prefixes). */

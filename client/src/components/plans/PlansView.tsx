@@ -1,8 +1,9 @@
 'use client';
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { WaitlistForm } from '@zephyrex/marketing';
 import { PageHeader } from 'zephyrex/ui/page-header';
 import { AppPage } from '~/components/common/AppPage';
-import WaitlistForm from '~/components/plans/WaitlistForm';
+import { WAITLIST_INTERESTS, type WaitlistInterest } from '~/lib/waitlist';
 
 const PAID = [
   'The AI writer: draft, shorten and rework a script',
@@ -13,11 +14,19 @@ const PAID = [
 ];
 
 /**
- * Plans, where every "See plans" and the subscribe redirect lead. Paid plans are not on sale:
- * the page says so and takes a place on the waitlist instead of a payment. A server with no
- * waitlist (lite) has no paid plans to wait for.
+ * Plans, where every "See plans", the subscribe redirect, the landing page and the closed sign-up
+ * page lead. New accounts and paid plans are waitlist only: the page says so and takes a place on
+ * the waitlist (@zephyrex/marketing's WaitlistForm) instead of a sign-up or a payment. A server
+ * with no waitlist (lite) has no paid plans to wait for.
  */
-export default function PlansView({ waitlist }: { waitlist: boolean }) {
+export default function PlansView({
+  waitlist,
+  initialInterest = 'account',
+}: {
+  waitlist: boolean;
+  /** The offer chosen to start with: an account for a visitor, the Pro plan for someone signed in. */
+  initialInterest?: WaitlistInterest;
+}) {
   return (
     <AppPage title='Plans' width='medium'>
       <div className='mb-6'>
@@ -29,11 +38,11 @@ export default function PlansView({ waitlist }: { waitlist: boolean }) {
         <div className='grid gap-8'>
           <section aria-labelledby='plans-waitlist' className='grid gap-3'>
             <h2 id='plans-waitlist' className='text-xl font-semibold'>
-              Paid plans: waitlist only
+              Accounts and paid plans: waitlist only
             </h2>
             <p>
               {
-                "Paid plans aren't on sale yet, and nothing here takes a payment. Join the waitlist and we'll email you when they open. Everything in the free plan stays free."
+                "New accounts aren't open yet, and paid plans aren't on sale: nothing here takes a payment. Join the waitlist and we'll email you when they open. Everything in the free plan stays free."
               }
             </p>
           </section>
@@ -47,12 +56,14 @@ export default function PlansView({ waitlist }: { waitlist: boolean }) {
               ))}
             </ul>
           </section>
-          <section aria-labelledby='plans-join' className='grid gap-4 rounded-lg border p-5'>
-            <h2 id='plans-join' className='text-lg font-semibold'>
-              Join the waitlist
-            </h2>
-            <WaitlistForm />
-          </section>
+          <WaitlistForm
+            title='Join the waitlist'
+            body={<p>Leave your email, and your name if you like. We write once, when accounts and paid plans open.</p>}
+            privacyHref='/docs/privacy'
+            interests={WAITLIST_INTERESTS}
+            initialInterest={initialInterest}
+            interestLabel='What are you waiting for?'
+          />
         </div>
       )}
     </AppPage>

@@ -310,7 +310,7 @@ async function audit(
     route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'The server is busy' }) }),
   );
   await page.goto('/scripts');
-  await page.getByText('Try again').waitFor();
+  await page.getByRole('button', { name: 'Try again' }).waitFor();
   await plainShot('in-library-error');
   await page.unrouteAll();
   // The waitlist's answers, where plans are sold: refused (the e2e SaaS server's intake points at an
@@ -318,15 +318,16 @@ async function audit(
   if (variant === 'saas') {
     await page.goto('/plans');
     await settled(page);
-    const form = page.getByRole('form', { name: 'Join the waitlist' });
-    await form.getByLabel('Email').fill('ada@example.com');
+    const form = page.getByRole('region', { name: 'Join the waitlist' });
+    await form.getByRole('textbox', { name: 'Email' }).fill('ada@example.com');
+    await form.getByRole('checkbox').check();
     await form.getByRole('button', { name: 'Join the waitlist' }).click();
     await form.getByRole('alert').waitFor();
     await page.evaluate(() => window.scrollTo(0, 0));
     await plainShot('in-plans-waitlist-refused');
-    await page.route('**/api/waitlist', (route) => route.fulfill({ status: 204 }));
-    await page.getByRole('button', { name: 'Join the waitlist' }).click();
-    await page.getByRole('status').filter({ hasText: "You're on the waitlist" }).waitFor();
+    await page.route('**/api/waitlist', (route) => route.fulfill({ status: 202, json: { ok: true } }));
+    await form.getByRole('button', { name: 'Join the waitlist' }).click();
+    await form.getByRole('status').filter({ hasText: 'on the waitlist' }).waitFor();
     await page.evaluate(() => window.scrollTo(0, 0));
     await plainShot('in-plans-waitlist-joined');
     await page.unrouteAll();
