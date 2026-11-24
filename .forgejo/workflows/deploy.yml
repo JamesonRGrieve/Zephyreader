@@ -18,9 +18,10 @@ concurrency:
 
 jobs:
   deploy:
-    # A Zephyrex Forgejo runner's size tier (SOP CI Runners: the smallest a job runs on). A Next
-    # build and the server bundle take the normal tier (5–8 vCPU); a fresh container per job.
-    runs-on: normal
+    # The one runner allowed to deploy (operator, 2026-11-24): `deploy`, on prod-forgejo-runner-backup
+    # only, which alone has SSH to the PUB_SITES guests. The size-tier runners (CORP_CICD) can't
+    # reach prod-zephyreader, so a deploy there built and then timed out shipping (run #2).
+    runs-on: deploy
     container:
       # node:24-trixie: Node 24 on Debian 13, the CT's release (the image Cule's deploy pins).
       image: docker.io/library/node@sha256:611b2e34ec1dd43a7bd4a334f146be7b0b51e8827acb86f94ca4c078cc53bba5
