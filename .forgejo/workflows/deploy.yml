@@ -2,8 +2,9 @@
 # Builds Zephyreader from main and places it on prod-zephyreader. Every step runs in a fresh
 # container from the pinned image; the runner host provides nothing but podman. The framework
 # repositories come from GitHub at the commits deploy/frameworks.env pins.
-# Until launch it never starts anything (deploy/ship.sh): the app stays disabled until the
-# pre-launch network security audit passes (operator, 2026-11-04).
+# Push to deploy (operator, 2026-11-24): deploy/ship.sh places the bundles and try-restarts the units,
+# which starts nothing the pipeline has not enabled; internal only until the pre-launch network
+# security audit passes (operator, 2026-11-04).
 name: Deploy
 
 on:
@@ -17,8 +18,9 @@ concurrency:
 
 jobs:
   deploy:
-    # The Zephyrex Forgejo runner: rootless podman on a VM, a fresh container per job.
-    runs-on: zephyrex-podman
+    # A Zephyrex Forgejo runner's size tier (SOP CI Runners: the smallest a job runs on). A Next
+    # build and the server bundle take the normal tier (5–8 vCPU); a fresh container per job.
+    runs-on: normal
     container:
       # node:24-trixie: Node 24 on Debian 13, the CT's release (the image Cule's deploy pins).
       image: docker.io/library/node@sha256:611b2e34ec1dd43a7bd4a334f146be7b0b51e8827acb86f94ca4c078cc53bba5

@@ -1,17 +1,18 @@
 # Deploying Zephyreader
 
 The SaaS edition deploys itself: every push to `main` on git.zephyrex.dev runs
-`.forgejo/workflows/deploy.yml` on the Zephyrex Forgejo runner (rootless podman, a fresh
+`.forgejo/workflows/deploy.yml` on a Zephyrex Forgejo runner of the `normal` tier (a fresh
 container per job). It builds the server and the client from this repository, plus the
 framework repositories at pinned commits, and puts them on `prod-zephyreader`. You can also
 start a run by hand (workflow_dispatch). The repository's home is git.zephyrex.dev, and it
 push-mirrors to GitHub.
 
-**Not launched.** The operator keeps Zephyreader fully disabled until a network security
-audit passes (2026-11-04). Until then a run builds and places the bundles but starts
-nothing: the `zephyreader-server` and `zephyreader-client` units are modelled disabled and
-stopped (`tofu-providers/opentofu/zephyrex/svc_zephyreader.tf`), and the edge has no route
-to the guest. Launch follows *Zephyrex SOP → Services → Zephyrex Framework SaaS Launch*.
+**Internal only.** Push to deploy, with the domain on the internal HAProxy and the public route
+staged for a one-click go-live (operator, 2026-11-24). Nothing is public until the network
+security audit passes (2026-11-04). A run places the bundles and try-restarts the
+`zephyreader-server` and `zephyreader-client` units, which starts nothing that is stopped:
+enabling them is the pipeline's (the framework_app stack in tofu-providers). Launch follows
+*Zephyrex SOP → Services → Zephyrex Framework SaaS Launch*.
 
 ## What a run does
 
@@ -31,9 +32,10 @@ to the guest. Launch follows *Zephyrex SOP → Services → Zephyrex Framework S
 4. **Place** (`ship.sh`). Checks it can reach the guest over ssh first (15 s timeout) and
    stops with prod untouched if it can't, then rsyncs each bundle into place, keeping the
    one before as `<dir>.previous`. `/etc/zephyreader/*.env` belongs to the infra pipeline
-   and is never touched. At launch this step also restarts each unit, server first (it
-   migrates the database at boot), and waits for it to answer, restoring the previous
-   bundle when it does not.
+   and is never touched. Then it try-restarts each unit (the server migrates the database
+   at boot), and fails the run if an enabled unit isn't running afterwards; a unit not yet
+   enabled is only placed. Launch adds a health check per part, restoring the previous
+   bundle when it does not answer.
 
 A failure in any build step stops the run before anything reaches the guest.
 

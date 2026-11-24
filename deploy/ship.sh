@@ -3,11 +3,12 @@
 # Puts built bundles on prod-zephyreader. Never touches /etc/zephyreader/*.env: the pipeline
 # owns those.
 #
-# Until launch it only places them. The operator keeps Zephyreader fully disabled until a
-# network security audit passes (2026-11-04): zephyreader-server and zephyreader-client are
-# modelled disabled and stopped, and nothing here starts them. Launch adds the restart and
-# health check per part, with the previous bundle restored when a part does not come up
-# (SOP: Zephyrex Framework SaaS Launch).
+# It places them and try-restarts the units, which starts nothing that is stopped: the pipeline
+# owns enabling them (framework_app_enabled). Push to deploy, internal only: the domain is on the
+# internal HAProxy with the public route staged for a one-click go-live (operator, 2026-11-24, via
+# Chief of Staff and Infra Architect); no public edge until the network security audit of
+# 2026-11-04's rule. Launch adds a health check per part, with the previous bundle restored when a
+# part does not come up (SOP: Zephyrex Framework SaaS Launch).
 #
 # Usage: deploy/ship.sh <server bundle> <client bundle>
 # Environment: ZEPHYREADER_DEPLOY_HOST, ZEPHYREADER_DEPLOY_USER, ZEPHYREADER_DEPLOY_KEY
@@ -45,4 +46,25 @@ place() {
 
 place "$server" /srv/zephyreader/server
 place "$client" /srv/zephyreader/client
-echo "placed; zephyreader-server and zephyreader-client stay stopped until launch"
+# Restart what runs: a no-op while the units are stopped (until the pipeline enables them), and
+# the new bundles take effect on every deploy after. The deploy user's sudoers rule allows exactly
+# try-restart for these two units, one unit per command, by full path; -n fails at once instead of
+# asking for a terminal.
+for unit in zephyreader-server zephyreader-client; do
+  remote "sudo -n /usr/bin/systemctl try-restart $unit"
+done
+# An enabled unit must be running after the restart: that fails the deploy. One not yet enabled
+# (the first deploy, before the pipeline enables it) is only placed, never checked.
+for unit in zephyreader-server zephyreader-client; do
+  if remote "systemctl is-enabled --quiet $unit"; then
+    # Still activating right after the restart counts as up; failed or inactive fails the deploy.
+    state=$(remote "systemctl is-active $unit" || true)
+    case $state in
+      active | activating) ;;
+      *) echo "$unit is enabled but $state after the restart" >&2; exit 1 ;;
+    esac
+    echo "$unit: running"
+  else
+    echo "$unit: not enabled yet; placed only"
+  fi
+done
