@@ -3,8 +3,8 @@ import type { ReactElement } from 'react';
 
 /**
  * Zephyreader's mark: a zephyr, three lines of wind that are lines of script; the line being read
- * curls in the accent. src/app/icon.svg is the same drawing in fixed colours, for the browser tab
- * and the installed app. Decorative: the app's name always stands beside it.
+ * curls in the accent. public/icon.svg is the same drawing in fixed colours, for the browser tab
+ * and the installed app (public/icon-16.svg is its 16 px cut). Decorative: the app's name always stands beside it.
  */
 export function ZephyreaderLogo(): ReactElement {
   return (
