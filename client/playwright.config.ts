@@ -64,6 +64,10 @@ const saas = {
   PORT: String(PORTS.saas),
   APP_URI: host(PORTS.saas),
   ZEPHYREADER_SERVER_URI: host(PORTS.server),
+  // The paid-plan waitlist is on, with its ERP somewhere that never answers: a signup is refused
+  // (502) unless a test stands in for the ERP.
+  WAITLIST_WEB_FORM: 'waitlist-e2e',
+  WAITLIST_ERP_URL: 'http://127.0.0.1:9',
 };
 
 const desktop = devices['Desktop Chrome'];

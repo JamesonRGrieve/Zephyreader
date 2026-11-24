@@ -5,6 +5,9 @@ import { ZephyreaderLogo } from './brand/ZephyreaderLogo';
 /** Where a signed-in person works: the script library. `/` is the landing page for visitors. */
 export const LIBRARY_PATH = '/scripts';
 
+/** Plans: paid plans are waitlist-only, so every "See plans" leads to the waitlist here. */
+export const PLANS_PATH = '/plans';
+
 /** The app's pages, which need a signed-in user (matched as path prefixes). */
 const APP_ROUTES = [LIBRARY_PATH, '/script/', '/present/', '/remote', '/recordings', '/settings'];
 
@@ -50,6 +53,8 @@ const config: ZephyrexConfig = {
     defaultTheme: (process.env.NEXT_PUBLIC_THEME_DEFAULT_MODE as 'dark' | 'light') ?? 'dark',
     // Never send a signed-in user's email hash to Gravatar: no request leaves for a third party.
     gravatar: false,
+    // Every upgrade prompt's "See plans": the waitlist, not a checkout (no plan is on sale yet).
+    plans: PLANS_PATH,
   },
   auth: {
     authPath: '/user',

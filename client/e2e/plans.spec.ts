@@ -31,7 +31,7 @@ test('free and lite: paid features are offered or absent, never broken', async (
   if (isSaas(testInfo.project.name)) {
     await expect(page.getByRole('note', { name: 'Upgrade' })).toContainText('A paid plan unlocks cloud recordings.');
   } else {
-    await expect(page.getByText('there is no cloud library on this server')).toBeVisible();
+    await expect(page.getByText('This server keeps no copy.', { exact: false })).toBeVisible();
   }
   await context.close();
 });
@@ -50,5 +50,36 @@ test('a pro subscriber has the AI writer and the recordings library', async ({ b
   await page.goto('/recordings');
   await expect(page.getByRole('region', { name: 'Your recordings' })).toBeVisible();
   await expect(page.getByRole('note', { name: 'Upgrade' })).toHaveCount(0);
+  await context.close();
+});
+
+test('paid plans are waitlist only: every way to pay leads to the waitlist, and none takes a payment', async ({
+  browser,
+}, testInfo) => {
+  const { page, context } = await signedInPerson(browser, testInfo);
+  // The framework's subscribe page is the plans page.
+  await page.goto('/user/subscribe');
+  await page.waitForURL(/\/plans$/);
+  if (!isSaas(testInfo.project.name)) {
+    await expect(page.getByText('This server has no paid plans.')).toBeVisible();
+    await context.close();
+    return;
+  }
+  await expect(page.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
+  await expect(page.getByText('nothing here takes a payment', { exact: false })).toBeVisible();
+  await expect(page.getByRole('form', { name: 'Join the waitlist' })).toBeVisible();
+
+  // Signed out, from the landing page, it is the same page.
+  const visitor = await browser.newContext();
+  const visitorPage = await visitor.newPage();
+  await visitorPage.goto('/plans');
+  await expect(visitorPage.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
+  await visitor.close();
+
+  // An upgrade prompt's "See plans" leads here too.
+  await page.goto('/recordings');
+  await page.getByRole('note', { name: 'Upgrade' }).getByRole('link', { name: 'See plans' }).click();
+  await page.waitForURL(/\/plans$/);
+  await expect(page.getByRole('heading', { name: 'Paid plans: waitlist only' })).toBeVisible();
   await context.close();
 });

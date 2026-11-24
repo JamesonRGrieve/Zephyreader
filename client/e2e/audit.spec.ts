@@ -245,6 +245,7 @@ async function audit(
     ['landing', '/'],
     ['sign-in', '/user'],
     ['privacy', '/docs/privacy'],
+    ['plans', '/plans'],
   ] as const) {
     await shoot(page, origin, `${prefix}-out-${name}`, url, reports);
   }
@@ -282,6 +283,7 @@ async function audit(
     ['recordings', '/recordings'],
     ['settings', '/settings'],
     ['account', '/user/manage'],
+    ['plans', '/plans'],
   ] as const) {
     await shoot(page, origin, `${prefix}-in-${name}`, url, reports);
   }
@@ -311,6 +313,24 @@ async function audit(
   await page.getByText('Try again').waitFor();
   await plainShot('in-library-error');
   await page.unrouteAll();
+  // The waitlist's answers, where plans are sold: refused (the e2e SaaS server's intake points at an
+  // ERP that isn't there, so the real route answers 502), then joined (the intake answered).
+  if (variant === 'saas') {
+    await page.goto('/plans');
+    await settled(page);
+    const form = page.getByRole('form', { name: 'Join the waitlist' });
+    await form.getByLabel('Email').fill('ada@example.com');
+    await form.getByRole('button', { name: 'Join the waitlist' }).click();
+    await form.getByRole('alert').waitFor();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await plainShot('in-plans-waitlist-refused');
+    await page.route('**/api/waitlist', (route) => route.fulfill({ status: 204 }));
+    await page.getByRole('button', { name: 'Join the waitlist' }).click();
+    await page.getByRole('status').filter({ hasText: "You're on the waitlist" }).waitFor();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await plainShot('in-plans-waitlist-joined');
+    await page.unrouteAll();
+  }
   // The prompter's panels, open.
   await page.goto(`/present/${keynote.id}`);
   await settled(page);
