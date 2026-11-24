@@ -16,9 +16,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-// Zephyreader's ports on the shared runner: 48000 + 10 × its 58137 lane (1), ten of them, 48010–48019
-// (Session 1 Manager, 2026-11-21, after a port clash).
-export const PORTS = { idp: 48010, server: 48011, lite: 48012, saas: 48013 } as const;
+// Zephyreader's ports on the shared runner: 48000 + 10 × the 58137 lane the job was granted
+// (ZEPHYREADER_E2E_LANE, default 1: 48010–48019; Session 1 Manager, 2026-11-21, after a port clash;
+// lane 11's 48110–48113, Chief of Staff, 2026-11-24).
+const PORT_BASE = 48000 + 10 * Number(process.env.ZEPHYREADER_E2E_LANE ?? '1');
+export const PORTS = { idp: PORT_BASE, server: PORT_BASE + 1, lite: PORT_BASE + 2, saas: PORT_BASE + 3 } as const;
 const host = (port: number) => `http://127.0.0.1:${port}`;
 export const IDP = host(PORTS.idp);
 const scratch = mkdtempSync(path.join(process.env.E2E_SCRATCH ?? tmpdir(), 'zephyreader-e2e-'));

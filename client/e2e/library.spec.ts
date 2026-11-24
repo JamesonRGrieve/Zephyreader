@@ -4,6 +4,7 @@
  * takes, through the pages, against the real back end.
  */
 import { expect, test } from '@playwright/test';
+import { IDP } from '../playwright.config';
 import { signedInPerson, watchHosts } from './support/people';
 
 const AUTOSAVED = 'Saved';
@@ -40,7 +41,7 @@ test('a new person writes a script, it saves itself, and they present it @phone'
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
 
   const origin = new URL(testInfo.project.use.baseURL ?? '').host;
-  const idp = '127.0.0.1:48010';
+  const idp = new URL(IDP).host;
   expect([...hosts].filter((host) => host !== origin && host !== idp)).toEqual([]);
   await context.close();
 });
