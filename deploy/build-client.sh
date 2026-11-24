@@ -3,7 +3,7 @@
 # Builds the client bundle that runs at /srv/zephyreader/client on prod-zephyreader: the
 # Next.js standalone server, minified JavaScript only (no TypeScript, no source maps), plus
 # the voice-follow model it serves from its own origin. The framework packages are compiled
-# from their checkouts first, in dependency order, because Zephyreader installs them from
+# from their checkouts first (compile-frameworks.sh), because Zephyreader installs them from
 # there.
 # Usage: deploy/build-client.sh <root laid out by fetch-frameworks.sh> <out>
 # The deployment's build-time settings come from the environment (deploy/deploy.env in CI).
@@ -16,21 +16,7 @@ client="$root/Zephyreader/client"
 export CI=true NEXT_TELEMETRY_DISABLED=1
 export pnpm_config_verify_deps_before_run=false pnpm_config_manage_package_manager_versions=false
 
-for library in zod2gql dynamic-form auth; do
-  (cd "$root/$library" && pnpm install --frozen-lockfile && pnpm run compile)
-done
-# Only the client-framework packages Zephyreader installs, read from its overrides so a new
-# one is never missed; zephyrex first, as the others build on it. (The root `compile`
-# builds every package in the workspace.)
-packages=$(grep -oE 'client-framework/packages/[a-z0-9-]+' "$client/pnpm-workspace.yaml" | sed 's#.*/##' | sort -u)
-(
-  cd "$root/client-framework"
-  pnpm install --frozen-lockfile
-  for package in zephyrex $(printf '%s\n' $packages | grep -vx zephyrex); do
-    echo "compiling @zephyrex/$package"
-    (cd "packages/$package" && pnpm run compile)
-  done
-)
+"$(dirname "$0")/compile-frameworks.sh" "$root"
 
 cd "$client"
 pnpm install --frozen-lockfile

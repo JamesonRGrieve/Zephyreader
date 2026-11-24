@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Zephyreader's release-candidate full gate, as Forgejo Actions on git.zephyrex.dev (operator,
+# 2026-11-21: "RCs will all run through cicd in forgejo, not directly on the runner"). It runs every
+# step of scripts/gate.sh, the same gate the build runners use, in a fresh container from the pinned
+# image. Start it by pushing an rc-* tag, or by hand. It never deploys: deploy.yml is separate.
+# Adopted from chronos .forgejo/workflows/ci.yml (fe88d40) under the RC-in-Forgejo rule (Zephyrex
+# Framework App Standards, 2026-11-24): a tier label for runs-on, GATE_CORES from the affinity.
+name: CI
+
+on:
+  push:
+    tags: ['rc-*']
+  workflow_dispatch:
+
+concurrency:
+  group: ci-zephyreader-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    # A tier label, the smallest that fits: Storybook and both editions build and run their e2e
+    # beside the gate's four pinned cores. The Zephyrex runners carry only giant/large/normal/
+    # small/tiny, and zephyrex-podman matched none, so a job would wait forever (SOP CI Runners;
+    # Infra Architect, 2026-11-21).
+    runs-on: normal
+    container:
+      # node:24-trixie, the image deploy.yml (and Cule's deploy) pins.
+      image: docker.io/library/node@sha256:611b2e34ec1dd43a7bd4a334f146be7b0b51e8827acb86f94ca4c078cc53bba5
+    timeout-minutes: 120
+    env:
+      UV_VERSION: 0.11.16
+      PNPM_VERSION: 11.1.1
+      JOB_DIR: /tmp/zephyreader-gate
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    steps:
+      - name: Check out Zephyreader
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      # The runner network has no IPv6 egress, and Debian's mirrors and npm answer AAAA first:
+      # apt is told to use IPv4, and Node to prefer it. (curl and git fall back on their own.)
+      - name: Install the toolchain
+        run: |
+          echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends rsync curl ca-certificates git python3 util-linux >/dev/null
+          npm install -g "pnpm@${PNPM_VERSION}" >/dev/null
+          curl -LsSf --ipv4 "https://astral.sh/uv/${UV_VERSION}/install.sh" | env UV_INSTALL_DIR=/usr/local/bin sh
+
+      # The gate runs on a copy of the tracked tree, as on a build runner (scripts/gate.sh).
+      - name: Lay out the job
+        run: |
+          mkdir -p -m 700 "$JOB_DIR/src"
+          git ls-files -z | tar --null -T - -cf - | tar -xf - -C "$JOB_DIR/src"
+
+      # No slot manager grants cores here: the gate takes the first four this container may run
+      # on. Its affinity, not /sys/fs/cgroup/cpuset.cpus.effective, which a rootless podman job
+      # container can't read (Remembron, 2026-11-24); gate.sh checks them against the same set.
+      - name: Run the full gate
+        env:
+          GATE_INSTALL_BROWSERS: '1'
+        run: |
+          export GATE_CORES=$(python3 -c 'import os; print(",".join(map(str, sorted(os.sched_getaffinity(0))[:4])))')
+          echo "cores: $GATE_CORES"
+          status=0
+          "$JOB_DIR/src/scripts/gate.sh" "$JOB_DIR" all || status=$?
+          cat "$JOB_DIR/logs/summary"
+          exit "$status"
+
+      - name: Show the failing steps' logs
+        if: failure()
+        run: |
+          for step in $(sed -n 's/^FAIL \([a-z0-9]*\).*/\1/p' "$JOB_DIR/logs/summary"); do
+            echo "::group::$step"
+            tail -n 200 "$JOB_DIR/logs/$step.log"
+            echo "::endgroup::"
+          done

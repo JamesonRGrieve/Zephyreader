@@ -18,10 +18,18 @@ cp -a "$repo" "$root/Zephyreader"
 
 fetch() {
   local name=$1 url=$2 ref=$3
-  rm -rf "${root:?}/$name"
-  git init -q "$root/$name"
-  git -C "$root/$name" fetch -q --depth 1 "$url" "$ref"
-  git -C "$root/$name" checkout -q FETCH_HEAD
+  # A checkout already here (a persisted build or job dir) is updated in place, so a pin move
+  # fetches one commit instead of the whole tree again; its node_modules stay, everything else
+  # the old commit left is cleaned away. A directory that isn't a checkout of this URL is
+  # replaced (Framework App Standards, Gates).
+  if [ "$(git -C "$root/$name" config --get remote.origin.url 2>/dev/null)" != "$url" ]; then
+    rm -rf "${root:?}/$name"
+    git init -q "$root/$name"
+    git -C "$root/$name" remote add origin "$url"
+  fi
+  git -C "$root/$name" fetch -q --depth 1 origin "$ref"
+  git -C "$root/$name" checkout -q --force FETCH_HEAD
+  git -C "$root/$name" clean -q -fdx -e node_modules
   # A pin is a full commit SHA. Anything else (a branch, a short or mistyped SHA, a server
   # answering with another commit) is refused here, before a build can use it.
   local head
