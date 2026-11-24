@@ -126,3 +126,11 @@ test('the hosted edition signs in only with Zephyrex, and lite only with Google'
   await expect(page.getByRole('button', { name: /^Continue with/ })).toHaveCount(1);
   await expect(page.getByRole('textbox')).toHaveCount(0);
 });
+
+test('the hosted server offers one identity provider, `authentik`', async ({ request }, testInfo) => {
+  test.skip(!isSaas(testInfo.project.name), 'lite serves its own Google sign-in');
+  const answer = await request.get('/api/v1/auth/oauth/providers');
+  expect(answer.status()).toBe(200);
+  const { providers } = (await answer.json()) as { providers: { name: string; provider: string }[] };
+  expect(providers.map(({ name, provider }) => ({ name, provider }))).toEqual([{ name: 'authentik', provider: 'oidc' }]);
+});
